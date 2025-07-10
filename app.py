@@ -228,6 +228,9 @@ def toxswaex_extract_data():
                 for row in rows:
                     flat_row = {"Project": project}
                     for key in headers:
+                        if key == "Project":
+                            # Skip Project as it's already set
+                            continue
                         if key in row:
                             flat_row[key] = row[key]
                         else:
