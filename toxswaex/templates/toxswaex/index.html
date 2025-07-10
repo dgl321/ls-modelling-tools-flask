@@ -509,8 +509,16 @@
             const summaryMode = document.getElementById('summarySheetCheck').checked;
             const projectOrder = getProjectOrder();
 
-            if (!mainDir) {
+            // Check if we have a directory path and mainDir, or if we need to scan first
+            const directoryInput = document.getElementById('directoryInput').value.trim();
+            if (!mainDir && !directoryInput) {
                 showToast('Please scan a directory first', 'warning');
+                return;
+            }
+            
+            // If we have a directory input but no mainDir, try to scan first
+            if (!mainDir && directoryInput) {
+                showToast('Please scan the directory first to load available projects', 'warning');
                 return;
             }
 
@@ -749,7 +757,7 @@
             currentData = null;
             currentHeader = null;
             currentRacValue = null;
-            mainDir = null;
+            // Don't clear mainDir - keep the directory information
             fullDataset = null;
             
             document.getElementById('compoundTypeSelect').style.display = 'none'; // Hide filter controls
