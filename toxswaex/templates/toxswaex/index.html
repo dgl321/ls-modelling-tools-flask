@@ -223,25 +223,6 @@
                         </div>
 
                         <div class="mb-3">
-                            <label for="compoundTypeSelect" class="form-label">Compound Type:</label>
-                            <select class="form-select" id="compoundTypeSelect">
-                                <option value="All">All</option>
-                                <option value="Parent">Parent</option>
-                                <option value="Metabolite">Metabolite</option>
-                            </select>
-                        </div>
-
-                        <div class="mb-3">
-                            <label for="sortSelect" class="form-label">Sort by:</label>
-                            <select class="form-select" id="sortSelect">
-                                <option value="Filename">Filename</option>
-                                <option value="Compound">Compound</option>
-                                <option value="Scenario">Scenario</option>
-                                <option value="File number">File number</option>
-                            </select>
-                        </div>
-
-                        <div class="mb-3">
                             <div class="form-check">
                                 <input class="form-check-input" type="checkbox" id="summarySheetCheck">
                                 <label class="form-check-label" for="summarySheetCheck">
@@ -285,7 +266,20 @@
                 <div class="card">
                     <div class="card-header d-flex justify-content-between align-items-center">
                         <h5 class="mb-0">Extracted Data</h5>
-                        <div>
+                        <div class="d-flex align-items-center gap-2">
+                            <!-- Filter Controls -->
+                            <select class="form-select form-select-sm" id="compoundTypeSelect" style="width: auto; min-width: 120px; display: none;">
+                                <option value="All">All Compounds</option>
+                                <option value="Parent">Parent</option>
+                                <option value="Metabolite">Metabolite</option>
+                            </select>
+                            <select class="form-select form-select-sm" id="sortSelect" style="width: auto; min-width: 120px; display: none;">
+                                <option value="Filename">Sort: Filename</option>
+                                <option value="Compound">Sort: Compound</option>
+                                <option value="Scenario">Sort: Scenario</option>
+                                <option value="File number">Sort: File #</option>
+                            </select>
+                            <!-- Action Buttons -->
                             <button class="btn btn-sm btn-outline-secondary" onclick="toggleTheme()" id="themeBtn">
                                 <i class="fas fa-sun"></i> Light Mode
                             </button>
@@ -553,6 +547,8 @@
                     currentHeader = data.header;
                     currentRacValue = data.rac_value;
                     console.log('Stored fullDataset length:', fullDataset ? fullDataset.length : 'null');
+                    document.getElementById('compoundTypeSelect').style.display = 'inline-block'; // Show filter controls
+                    document.getElementById('sortSelect').style.display = 'inline-block'; // Show filter controls
                     applyFiltersAndSort(); // Apply initial filtering and sorting
                     document.getElementById('exportBtn').disabled = false;
                     document.getElementById('copyBtn').disabled = false;
@@ -756,6 +752,8 @@
             mainDir = null;
             fullDataset = null;
             
+            document.getElementById('compoundTypeSelect').style.display = 'none'; // Hide filter controls
+            document.getElementById('sortSelect').style.display = 'none'; // Hide filter controls
             document.getElementById('dataTable').innerHTML = `
                 <div class="text-muted text-center py-5">
                     <i class="fas fa-table fa-3x mb-3"></i>
@@ -797,7 +795,7 @@
             infoBtn.onclick = () => new bootstrap.Modal(document.getElementById('infoModal')).show();
             cardHeader.querySelector('.d-flex').appendChild(infoBtn);
 
-                    // Add event listeners for real-time filtering
+                    // Add event listeners for filtering
         document.getElementById('racInput').addEventListener('input', function() {
             console.log('RAC input changed, applying filters...');
             if (fullDataset) {
