@@ -46,6 +46,13 @@
         .table td {
             border-color: #3E3A3F;
         }
+        /* Fix dark mode table hover - ensure text remains visible */
+        .table-hover tbody tr:hover {
+            background-color: #2E2E2E !important;
+        }
+        .table-hover tbody tr:hover td {
+            color: #E0E0E0 !important;
+        }
         .list-group {
             background-color: #1E1E1E;
             border: 1px solid #3E3A3F;
