@@ -883,6 +883,18 @@
             // Don't clear mainDir - keep the directory information
             fullDataset = null;
             
+            // Clear project selection checkboxes
+            const projectCheckboxes = document.querySelectorAll('#projectList input[type="checkbox"]');
+            projectCheckboxes.forEach(checkbox => {
+                checkbox.checked = false;
+            });
+            
+            // Clear any visual selection highlighting
+            const projectItems = document.querySelectorAll('.project-item');
+            projectItems.forEach(item => {
+                item.classList.remove('selecting');
+            });
+            
             document.getElementById('compoundTypeSelect').style.display = 'none'; // Hide filter controls
             document.getElementById('sortSelect').style.display = 'none'; // Hide filter controls
             document.getElementById('dataTable').innerHTML = `
@@ -896,7 +908,7 @@
             document.getElementById('copyBtn').disabled = true;
             document.getElementById('resetBtn').disabled = true;
             
-            showToast('Table reset successfully', 'info');
+            showToast('Table and project selection reset successfully', 'info');
         }
 
         function toggleTheme() {
