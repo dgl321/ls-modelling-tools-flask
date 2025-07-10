@@ -176,6 +176,8 @@ def toxswaex_extract_data():
         selected_files = data.get('selected_files', None)
         rac_value = data.get('rac_value', None)
         areic_comparison = data.get('areic_comparison', False)
+        summary_mode = data.get('summary_mode', False)
+        project_order = data.get('project_order', [])
         
         if not main_dir:
             return jsonify({'error': 'No main directory specified'})
@@ -192,8 +194,11 @@ def toxswaex_extract_data():
         
         # Extract data
         print(f"Extracting data from {main_dir} for projects: {selected_projects}")
+        print(f"Summary mode: {summary_mode}")
+        print(f"Project order: {project_order}")
         all_data, errors = toxswa_extractor.extract_data(
-            main_dir, selected_projects, selected_files, rac_value, areic_comparison
+            main_dir, selected_projects, selected_files, rac_value, 
+            areic_comparison, summary_mode, project_order
         )
         print(f"Extraction result: {len(all_data) if all_data else 0} projects, {sum(len(rows) for rows in all_data.values()) if all_data else 0} total rows")
         if errors:
@@ -250,8 +255,11 @@ def toxswaex_export_excel():
         with tempfile.NamedTemporaryFile(delete=False, suffix='.xlsx') as tmp_file:
             filepath = tmp_file.name
         
-        # Export to Excel
-        toxswa_extractor.export_to_excel(filepath)
+        # Export to Excel (summary sheet will be created if batch_mode and summary_mode are enabled)
+        success = toxswa_extractor.export_to_excel(filepath)
+        
+        if not success:
+            return jsonify({'error': 'Failed to export Excel file'})
         
         # Send file
         return send_file(

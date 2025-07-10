@@ -236,6 +236,21 @@
 
                         <div class="mb-3">
                             <div class="form-check">
+                                <input class="form-check-input" type="checkbox" id="summarySheetCheck">
+                                <label class="form-check-label" for="summarySheetCheck">
+                                    Summary Sheet
+                                </label>
+                            </div>
+                            <div class="mt-2" id="projectOrderSection" style="display: none;">
+                                <label class="form-label">Order projects for summary:</label>
+                                <div id="projectOrderList" class="list-group" style="max-height: 200px; overflow-y: auto;">
+                                    <!-- Project order items will be populated here -->
+                                </div>
+                            </div>
+                        </div>
+
+                        <div class="mb-3">
+                            <div class="form-check">
                                 <input class="form-check-input" type="checkbox" id="areicComparisonCheck">
                                 <label class="form-check-label" for="areicComparisonCheck">
                                     Highlight mitigation exceeding 95%
@@ -427,12 +442,71 @@
             return Array.from(checkboxes).map(cb => cb.value);
         }
 
+        function toggleSummarySheet() {
+            const summarySheetCheck = document.getElementById('summarySheetCheck');
+            const projectOrderSection = document.getElementById('projectOrderSection');
+            
+            if (summarySheetCheck.checked) {
+                projectOrderSection.style.display = 'block';
+                populateProjectOrderList();
+            } else {
+                projectOrderSection.style.display = 'none';
+            }
+        }
+
+        function populateProjectOrderList() {
+            const selectedProjects = getSelectedProjects();
+            const projectOrderList = document.getElementById('projectOrderList');
+            
+            projectOrderList.innerHTML = '';
+            selectedProjects.forEach(project => {
+                const item = document.createElement('div');
+                item.className = 'list-group-item d-flex justify-content-between align-items-center';
+                item.innerHTML = `
+                    <span>${project}</span>
+                    <div>
+                        <button class="btn btn-sm btn-outline-secondary" onclick="moveProjectUp(this)">
+                            <i class="fas fa-arrow-up"></i>
+                        </button>
+                        <button class="btn btn-sm btn-outline-secondary" onclick="moveProjectDown(this)">
+                            <i class="fas fa-arrow-down"></i>
+                        </button>
+                    </div>
+                `;
+                projectOrderList.appendChild(item);
+            });
+        }
+
+        function moveProjectUp(button) {
+            const item = button.closest('.list-group-item');
+            const prevItem = item.previousElementSibling;
+            if (prevItem) {
+                item.parentNode.insertBefore(item, prevItem);
+            }
+        }
+
+        function moveProjectDown(button) {
+            const item = button.closest('.list-group-item');
+            const nextItem = item.nextElementSibling;
+            if (nextItem) {
+                item.parentNode.insertBefore(nextItem, item);
+            }
+        }
+
+        function getProjectOrder() {
+            const projectOrderList = document.getElementById('projectOrderList');
+            const items = projectOrderList.querySelectorAll('.list-group-item span');
+            return Array.from(items).map(span => span.textContent);
+        }
+
         function extractData() {
             const selectedProjects = getSelectedProjects();
             const racValue = document.getElementById('racInput').value;
             const compoundType = document.getElementById('compoundTypeSelect').value;
             const sortBy = document.getElementById('sortSelect').value;
             const areicComparison = document.getElementById('areicComparisonCheck').checked;
+            const summaryMode = document.getElementById('summarySheetCheck').checked;
+            const projectOrder = getProjectOrder();
 
             if (!mainDir) {
                 showToast('Please scan a directory first', 'warning');
@@ -456,7 +530,9 @@
                     rac_value: racValue,
                     compound_type: compoundType,
                     sort_by: sortBy,
-                    areic_comparison: areicComparison
+                    areic_comparison: areicComparison,
+                    summary_mode: summaryMode,
+                    project_order: projectOrder
                 })
             })
             .then(response => response.json())
@@ -737,6 +813,9 @@
                 console.log('No data available for filtering');
             }
         });
+
+        // Add event listener for summary sheet
+        document.getElementById('summarySheetCheck').addEventListener('change', toggleSummarySheet);
         });
     </script>
 </body>
