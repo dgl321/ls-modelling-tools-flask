@@ -482,8 +482,8 @@ class TOXSWAExtractor:
                 key=lambda r: (
                     r["Compound"].upper(),
                     (
-                        int(re.search(r"(\d+)\.sum$", r["Filename"]).group(1))
-                        if re.search(r"(\d+)\.sum$", r["Filename"])
+                        int(match.group(1))
+                        if (match := re.search(r"(\d+)\.sum$", r["Filename"])) is not None
                         else 999999999
                     ),
                 ),
