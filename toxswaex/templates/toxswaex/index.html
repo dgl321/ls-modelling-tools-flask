@@ -186,6 +186,45 @@
         body.light-mode .normal {
             color: #28a745 !important;
         }
+        
+        /* Multi-select styles */
+        .project-item {
+            cursor: pointer;
+            user-select: none;
+            transition: background-color 0.2s;
+        }
+        
+        .project-item.selecting {
+            background-color: #007bff !important;
+            color: white !important;
+        }
+        
+        .project-item.selecting .form-check-label {
+            color: white !important;
+        }
+        
+        .project-item.selecting .form-check-input {
+            border-color: white;
+        }
+        
+        body.light-mode .project-item.selecting {
+            background-color: #007bff !important;
+            color: white !important;
+        }
+        
+        body.light-mode .project-item.selecting .form-check-label {
+            color: white !important;
+        }
+        
+        .multi-select-hint {
+            font-size: 0.8em;
+            color: #6c757d;
+            margin-top: 5px;
+        }
+        
+        body.light-mode .multi-select-hint {
+            color: #6c757d;
+        }
     </style>
 </head>
 <body>
@@ -214,6 +253,10 @@
                             <label class="form-label">Select Project(s):</label>
                             <div id="projectList" class="list-group" style="max-height: 300px; overflow-y: auto;">
                                 <div class="text-muted text-center py-3">No projects available</div>
+                            </div>
+                            <div class="multi-select-hint">
+                                <i class="fas fa-info-circle"></i> 
+                                Tip: Click and drag to select multiple projects, or hold Ctrl/Cmd to select individual projects
                             </div>
                         </div>
 
@@ -342,7 +385,83 @@
         let currentRacValue = null;
         let mainDir = null;
         let isDarkMode = true;
-        let fullDataset = null; // Store the complete dataset for client-side filtering
+        let fullDataset = null; // Store the complete dataset
+        
+        // Multi-select variables
+        let isSelecting = false;
+        let lastSelectedIndex = -1;
+        let selectedRange = [];
+        
+        // Multi-select functionality
+        function setupMultiSelect() {
+            const projectList = document.getElementById('projectList');
+            const projectItems = projectList.querySelectorAll('.project-item');
+            
+            projectItems.forEach((item, index) => {
+                const checkbox = item.querySelector('.project-checkbox');
+                
+                // Mouse events for drag selection
+                item.addEventListener('mousedown', (e) => {
+                    if (e.target === checkbox || e.target.closest('.form-check')) {
+                        return; // Don't interfere with checkbox clicks
+                    }
+                    
+                    e.preventDefault();
+                    isSelecting = true;
+                    lastSelectedIndex = index;
+                    
+                    // Toggle current item
+                    checkbox.checked = !checkbox.checked;
+                    updateItemSelection(item, checkbox.checked);
+                    
+                    selectedRange = [index];
+                });
+                
+                item.addEventListener('mouseenter', (e) => {
+                    if (isSelecting && e.target !== checkbox && !e.target.closest('.form-check')) {
+                        // Select all items in the range
+                        const start = Math.min(lastSelectedIndex, index);
+                        const end = Math.max(lastSelectedIndex, index);
+                        
+                        for (let i = 0; i < projectItems.length; i++) {
+                            const currentItem = projectItems[i];
+                            const currentCheckbox = currentItem.querySelector('.project-checkbox');
+                            const shouldSelect = i >= start && i <= end;
+                            
+                            if (currentCheckbox.checked !== shouldSelect) {
+                                currentCheckbox.checked = shouldSelect;
+                                updateItemSelection(currentItem, shouldSelect);
+                            }
+                        }
+                        
+                        selectedRange = [];
+                        for (let i = start; i <= end; i++) {
+                            selectedRange.push(i);
+                        }
+                    }
+                });
+                
+                // Checkbox click handler
+                checkbox.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    updateItemSelection(item, checkbox.checked);
+                });
+            });
+            
+            // Global mouse up handler
+            document.addEventListener('mouseup', () => {
+                isSelecting = false;
+                selectedRange = [];
+            });
+        }
+        
+        function updateItemSelection(item, isSelected) {
+            if (isSelected) {
+                item.classList.add('selecting');
+            } else {
+                item.classList.remove('selecting');
+            }
+        }
 
         function showLoading(buttonId) {
             const btn = document.getElementById(buttonId);
@@ -425,10 +544,11 @@
             projectList.innerHTML = '';
             projects.forEach(project => {
                 const item = document.createElement('div');
-                item.className = 'list-group-item list-group-item-action';
+                item.className = 'list-group-item list-group-item-action project-item';
+                item.setAttribute('data-project', project);
                 item.innerHTML = `
                     <div class="form-check">
-                        <input class="form-check-input" type="checkbox" value="${project}" id="project_${project}">
+                        <input class="form-check-input project-checkbox" type="checkbox" value="${project}" id="project_${project}">
                         <label class="form-check-label" for="project_${project}">
                             ${project}
                         </label>
@@ -436,6 +556,9 @@
                 `;
                 projectList.appendChild(item);
             });
+            
+            // Add multi-select functionality
+            setupMultiSelect();
         }
 
         function getSelectedProjects() {
