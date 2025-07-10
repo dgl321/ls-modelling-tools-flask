@@ -1,0 +1,743 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>TOXSWA Extractor</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        body {
+            background-color: #121212;
+            color: #E0E0E0;
+            font-family: 'Segoe UI', sans-serif;
+        }
+        .card {
+            background-color: #1E1E1E;
+            border: 1px solid #2E2E2E;
+        }
+        .btn-primary {
+            background-color: #2D2D30;
+            border-color: #3E3A3F;
+        }
+        .btn-primary:hover {
+            background-color: #3A3A3F;
+            border-color: #3E3A3F;
+        }
+        .form-control, .form-select {
+            background-color: #1E1E1E;
+            border: 1px solid #3E3A3F;
+            color: #E0E0E0;
+        }
+        .form-control:focus, .form-select:focus {
+            background-color: #1E1E1E;
+            border-color: #007bff;
+            color: #E0E0E0;
+            box-shadow: 0 0 0 0.2rem rgba(0, 123, 255, 0.25);
+        }
+        .table {
+            background-color: #1E1E1E;
+            color: #E0E0E0;
+        }
+        .table th {
+            background-color: #2E2E2E;
+            border-color: #3E3A3F;
+        }
+        .table td {
+            border-color: #3E3A3F;
+        }
+        .list-group {
+            background-color: #1E1E1E;
+            border: 1px solid #3E3A3F;
+        }
+        .list-group-item {
+            background-color: #1E1E1E;
+            border-color: #3E3A3F;
+            color: #E0E0E0;
+        }
+        .list-group-item:hover {
+            background-color: #2E2E2E;
+        }
+        .list-group-item.active {
+            background-color: #007bff;
+            border-color: #007bff;
+        }
+        .alert {
+            background-color: #1E1E1E;
+            border-color: #3E3A3F;
+        }
+        .exceeded {
+            color: #ff6b6b !important;
+            font-weight: bold;
+        }
+        .normal {
+            color: #51cf66 !important;
+        }
+        .logo-container {
+            text-align: center;
+            margin-bottom: 20px;
+        }
+        .logo {
+            max-width: 200px;
+            height: auto;
+        }
+        .loading {
+            display: none;
+        }
+        .spinner-border-sm {
+            width: 1rem;
+            height: 1rem;
+        }
+        .toast-container {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            z-index: 9999;
+        }
+        .toast {
+            background-color: #1E1E1E;
+            border: 1px solid #3E3A3F;
+            color: #E0E0E0;
+            min-width: 300px;
+        }
+        
+        /* Light mode styles */
+        body.light-mode {
+            background-color: #F0F0F0;
+            color: #202020;
+        }
+        
+        body.light-mode .card {
+            background-color: #FFFFFF;
+            border: 1px solid #C0C0C0;
+        }
+        
+        body.light-mode .btn-primary {
+            background-color: #E0E0E0;
+            border-color: #A0A0A0;
+            color: #202020;
+        }
+        
+        body.light-mode .btn-primary:hover {
+            background-color: #D0D0D0;
+            border-color: #A0A0A0;
+        }
+        
+        body.light-mode .form-control,
+        body.light-mode .form-select {
+            background-color: #FFFFFF;
+            border: 1px solid #A0A0A0;
+            color: #202020;
+        }
+        
+        body.light-mode .form-control:focus,
+        body.light-mode .form-select:focus {
+            background-color: #FFFFFF;
+            border-color: #007bff;
+            color: #202020;
+        }
+        
+        body.light-mode .table {
+            background-color: #FFFFFF;
+            color: #202020;
+        }
+        
+        body.light-mode .table th {
+            background-color: #E0E0E0;
+            border-color: #C0C0C0;
+        }
+        
+        body.light-mode .table td {
+            border-color: #C0C0C0;
+        }
+        
+        body.light-mode .list-group {
+            background-color: #FFFFFF;
+            border: 1px solid #A0A0A0;
+        }
+        
+        body.light-mode .list-group-item {
+            background-color: #FFFFFF;
+            border-color: #A0A0A0;
+            color: #202020;
+        }
+        
+        body.light-mode .list-group-item:hover {
+            background-color: #F0F0F0;
+        }
+        
+        body.light-mode .toast {
+            background-color: #FFFFFF;
+            border: 1px solid #A0A0A0;
+            color: #202020;
+        }
+        
+        body.light-mode .exceeded {
+            color: #dc3545 !important;
+        }
+        
+        body.light-mode .normal {
+            color: #28a745 !important;
+        }
+    </style>
+</head>
+<body>
+    <div class="container-fluid mt-3">
+        <div class="row">
+            <!-- Left Side: File/Project Selection -->
+            <div class="col-md-4">
+                <div class="card">
+                    <div class="card-body">
+                        <div class="logo-container">
+                            <img src="{{ url_for('toxswaex.static', filename='ls.png') }}" alt="TOXSWA Logo" class="logo">
+                            <h4 class="mt-2 text-warning">TOXSWA Extractor v1</h4>
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="directoryInput" class="form-label">SWASH Directory Path:</label>
+                            <div class="input-group">
+                                <input type="text" class="form-control" id="directoryInput" value="C:\SwashProjects" placeholder="Enter directory path...">
+                                <button class="btn btn-secondary" type="button" onclick="scanDirectory()">
+                                    <i class="fas fa-search"></i> Scan
+                                </button>
+                            </div>
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label">Select Project(s):</label>
+                            <div id="projectList" class="list-group" style="max-height: 300px; overflow-y: auto;">
+                                <div class="text-muted text-center py-3">No projects available</div>
+                            </div>
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="racInput" class="form-label">RAC Value (μg/L):</label>
+                            <input type="number" class="form-control" id="racInput" placeholder="Enter RAC value..." step="0.000001">
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="compoundTypeSelect" class="form-label">Compound Type:</label>
+                            <select class="form-select" id="compoundTypeSelect">
+                                <option value="All">All</option>
+                                <option value="Parent">Parent</option>
+                                <option value="Metabolite">Metabolite</option>
+                            </select>
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="sortSelect" class="form-label">Sort by:</label>
+                            <select class="form-select" id="sortSelect">
+                                <option value="Filename">Filename</option>
+                                <option value="Compound">Compound</option>
+                                <option value="Scenario">Scenario</option>
+                                <option value="File number">File number</option>
+                            </select>
+                        </div>
+
+                        <div class="mb-3">
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" id="areicComparisonCheck">
+                                <label class="form-check-label" for="areicComparisonCheck">
+                                    Highlight mitigation exceeding 95%
+                                </label>
+                            </div>
+                        </div>
+
+                        <div class="d-grid gap-2">
+                            <button class="btn btn-success" onclick="extractData()" id="extractBtn">
+                                <span class="loading">
+                                    <span class="spinner-border spinner-border-sm me-2"></span>
+                                </span>
+                                <i class="fas fa-download me-2"></i>Extract Data
+                            </button>
+                            <button class="btn btn-info" onclick="exportExcel()" id="exportBtn" disabled>
+                                <i class="fas fa-file-excel me-2"></i>Export to Excel
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Right Side: Data Display -->
+            <div class="col-md-8">
+                <div class="card">
+                    <div class="card-header d-flex justify-content-between align-items-center">
+                        <h5 class="mb-0">Extracted Data</h5>
+                        <div>
+                            <button class="btn btn-sm btn-outline-secondary" onclick="toggleTheme()" id="themeBtn">
+                                <i class="fas fa-sun"></i> Light Mode
+                            </button>
+                            <button class="btn btn-sm btn-outline-secondary" onclick="copyTable()" id="copyBtn" disabled>
+                                <i class="fas fa-copy"></i> Copy
+                            </button>
+                            <button class="btn btn-sm btn-outline-warning" onclick="resetTable()" id="resetBtn" disabled>
+                                <i class="fas fa-undo"></i> Reset
+                            </button>
+                        </div>
+                    </div>
+                    <div class="card-body">
+                        <div id="dataTable">
+                            <div class="text-muted text-center py-5">
+                                <i class="fas fa-table fa-3x mb-3"></i>
+                                <p>No data extracted yet. Select a directory and projects to begin.</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast Container -->
+    <div class="toast-container" id="toastContainer"></div>
+
+    <!-- Info Modal -->
+    <div class="modal fade" id="infoModal" tabindex="-1">
+        <div class="modal-dialog modal-lg">
+            <div class="modal-content" style="background-color: #1E1E1E; color: #E0E0E0;">
+                <div class="modal-header">
+                    <h5 class="modal-title">Usage Instructions</h5>
+                    <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                </div>
+                <div class="modal-body">
+                    <ol>
+                        <li>Enter the path to a SWASH directory containing TOXSWA projects.</li>
+                        <li>The directory will be scanned for project folders containing 'toxswa' subfolders.</li>
+                        <li>Multi-select one or more project folders and click 'Extract Data'.</li>
+                        <li>Each project should contain a 'toxswa' folder with .sum files.</li>
+                        <li>Extracted data includes PEC values for water and sediment compartments.</li>
+                        <li>Use the RAC value to highlight exceedances in the table.</li>
+                        <li>Choose between Parent and Metabolite compound types.</li>
+                        <li>Sort data by filename, compound, or scenario.</li>
+                        <li>Enable areic comparison to highlight mitigation scenarios.</li>
+                        <li>Click the copy button to copy selected data or the entire table.</li>
+                        <li>Click 'Export to Excel' to save the data with detailed sheets.</li>
+                        <li>Click the reset button to clear the table.</li>
+                    </ol>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        let currentData = null;
+        let currentHeader = null;
+        let currentRacValue = null;
+        let mainDir = null;
+        let isDarkMode = true;
+        let fullDataset = null; // Store the complete dataset for client-side filtering
+
+        function showLoading(buttonId) {
+            const btn = document.getElementById(buttonId);
+            btn.querySelector('.loading').style.display = 'inline-block';
+            btn.disabled = true;
+        }
+
+        function hideLoading(buttonId) {
+            const btn = document.getElementById(buttonId);
+            btn.querySelector('.loading').style.display = 'none';
+            btn.disabled = false;
+        }
+
+        function showToast(message, type = 'info') {
+            const toastContainer = document.getElementById('toastContainer');
+            const toastId = 'toast-' + Date.now();
+            
+            const toastHtml = `
+                <div class="toast" id="${toastId}" role="alert" aria-live="assertive" aria-atomic="true">
+                    <div class="toast-header" style="background-color: ${type === 'success' ? '#28a745' : type === 'danger' ? '#dc3545' : type === 'warning' ? '#ffc107' : '#17a2b8'}; color: white;">
+                        <strong class="me-auto">${type.charAt(0).toUpperCase() + type.slice(1)}</strong>
+                        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="toast"></button>
+                    </div>
+                    <div class="toast-body">
+                        ${message}
+                    </div>
+                </div>
+            `;
+            
+            toastContainer.insertAdjacentHTML('beforeend', toastHtml);
+            const toastElement = document.getElementById(toastId);
+            const toast = new bootstrap.Toast(toastElement, { delay: 4000 });
+            toast.show();
+            
+            // Remove toast element after it's hidden
+            toastElement.addEventListener('hidden.bs.toast', () => {
+                toastElement.remove();
+            });
+        }
+
+        function scanDirectory() {
+            const directory = document.getElementById('directoryInput').value.trim();
+            if (!directory) {
+                showToast('Please enter a directory path', 'warning');
+                return;
+            }
+
+            showLoading('extractBtn');
+            fetch('/toxswaex/scan_directory', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ directory: directory })
+            })
+            .then(response => response.json())
+            .then(data => {
+                hideLoading('extractBtn');
+                if (data.error) {
+                    showToast(data.error, 'danger');
+                } else {
+                    mainDir = data.main_dir;
+                    displayProjects(data.projects);
+                    showToast(`Found ${data.projects.length} project(s)`, 'success');
+                }
+            })
+            .catch(error => {
+                hideLoading('extractBtn');
+                showToast('Error scanning directory: ' + error.message, 'danger');
+            });
+        }
+
+        function displayProjects(projects) {
+            const projectList = document.getElementById('projectList');
+            if (projects.length === 0) {
+                projectList.innerHTML = '<div class="text-muted text-center py-3">No projects found</div>';
+                return;
+            }
+
+            projectList.innerHTML = '';
+            projects.forEach(project => {
+                const item = document.createElement('div');
+                item.className = 'list-group-item list-group-item-action';
+                item.innerHTML = `
+                    <div class="form-check">
+                        <input class="form-check-input" type="checkbox" value="${project}" id="project_${project}">
+                        <label class="form-check-label" for="project_${project}">
+                            ${project}
+                        </label>
+                    </div>
+                `;
+                projectList.appendChild(item);
+            });
+        }
+
+        function getSelectedProjects() {
+            const checkboxes = document.querySelectorAll('#projectList input[type="checkbox"]:checked');
+            return Array.from(checkboxes).map(cb => cb.value);
+        }
+
+        function extractData() {
+            const selectedProjects = getSelectedProjects();
+            const racValue = document.getElementById('racInput').value;
+            const compoundType = document.getElementById('compoundTypeSelect').value;
+            const sortBy = document.getElementById('sortSelect').value;
+            const areicComparison = document.getElementById('areicComparisonCheck').checked;
+
+            if (!mainDir) {
+                showToast('Please scan a directory first', 'warning');
+                return;
+            }
+
+            if (selectedProjects.length === 0) {
+                showToast('Please select at least one project', 'warning');
+                return;
+            }
+
+            showLoading('extractBtn');
+            fetch('/toxswaex/extract_data', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    main_dir: mainDir,
+                    selected_projects: selectedProjects,
+                    rac_value: racValue,
+                    compound_type: compoundType,
+                    sort_by: sortBy,
+                    areic_comparison: areicComparison
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                hideLoading('extractBtn');
+                if (data.error) {
+                    showToast(data.error, 'danger');
+                } else {
+                    console.log('Received data from server:', data);
+                    fullDataset = data.data; // Store the complete dataset
+                    currentHeader = data.header;
+                    currentRacValue = data.rac_value;
+                    console.log('Stored fullDataset length:', fullDataset ? fullDataset.length : 'null');
+                    applyFiltersAndSort(); // Apply initial filtering and sorting
+                    document.getElementById('exportBtn').disabled = false;
+                    document.getElementById('copyBtn').disabled = false;
+                    document.getElementById('resetBtn').disabled = false; // Enable reset button
+                    
+                    if (data.errors && data.errors.length > 0) {
+                        showToast(`Extraction completed with ${data.errors.length} warning(s)`, 'warning');
+                    } else {
+                        showToast(`Successfully extracted ${data.row_count} row(s)`, 'success');
+                    }
+                }
+            })
+            .catch(error => {
+                hideLoading('extractBtn');
+                showToast('Error extracting data: ' + error.message, 'danger');
+            });
+        }
+
+        function applyFiltersAndSort() {
+            if (!fullDataset || !currentHeader) {
+                console.log('No fullDataset or currentHeader available');
+                return;
+            }
+
+            console.log('Applying filters and sort...');
+            console.log('Full dataset length:', fullDataset.length);
+            console.log('Sample row:', fullDataset[0]);
+            console.log('Available columns:', currentHeader);
+
+            const racValue = parseFloat(document.getElementById('racInput').value) || null;
+            const compoundType = document.getElementById('compoundTypeSelect').value;
+            const sortBy = document.getElementById('sortSelect').value;
+
+            console.log('Filters - RAC:', racValue, 'Compound Type:', compoundType, 'Sort:', sortBy);
+
+            // Filter by compound type
+            let filteredData = fullDataset.filter(row => {
+                if (compoundType === 'All') return true;
+                // Check if Type field exists, otherwise skip filtering
+                if (!row.hasOwnProperty('Type') || !row['Type']) {
+                    console.log('Row missing Type field or empty Type:', row);
+                    return true; // Include all rows if Type field doesn't exist
+                }
+                const matches = row['Type'] === compoundType;
+                console.log(`Row Type: "${row['Type']}", Filter: "${compoundType}", Matches: ${matches}`);
+                return matches;
+            });
+
+            console.log('Filtered data length:', filteredData.length);
+
+            // Sort the filtered data
+            filteredData.sort((a, b) => {
+                switch (sortBy) {
+                    case 'Filename':
+                        return (a['Filename'] || '').localeCompare(b['Filename'] || '');
+                    case 'Compound':
+                        return (a['Compound'] || '').localeCompare(b['Compound'] || '');
+                    case 'Scenario':
+                        return (a['Scenario'] || '').localeCompare(b['Scenario'] || '');
+                    case 'File number':
+                        const getFileNumber = (filename) => {
+                            if (!filename) return 999999;
+                            const match = filename.match(/(\d+)\.sum$/);
+                            return match ? parseInt(match[1]) : 999999;
+                        };
+                        return getFileNumber(a['Filename']) - getFileNumber(b['Filename']);
+                    default:
+                        return 0;
+                }
+            });
+
+            // Update current data and display
+            currentData = filteredData;
+            console.log('Displaying filtered data, length:', filteredData.length);
+            displayTable(filteredData, currentHeader, racValue);
+        }
+
+        function displayTable(data, header, racValue) {
+            const tableContainer = document.getElementById('dataTable');
+            
+            if (!data || data.length === 0) {
+                tableContainer.innerHTML = `
+                    <div class="text-muted text-center py-5">
+                        <i class="fas fa-exclamation-triangle fa-3x mb-3"></i>
+                        <p>No data to display</p>
+                    </div>
+                `;
+                return;
+            }
+
+            let tableHTML = `
+                <div class="table-responsive">
+                    <table class="table table-hover">
+                        <thead>
+                            <tr>
+            `;
+            
+            header.forEach(col => {
+                tableHTML += `<th>${col}</th>`;
+            });
+            
+            tableHTML += `
+                            </tr>
+                        </thead>
+                        <tbody>
+            `;
+
+            data.forEach((row, rowIndex) => {
+                tableHTML += '<tr>';
+                header.forEach(col => {
+                    const value = row[col];
+                    const displayValue = value !== undefined && value !== null ? value : '';
+                    let cellClass = '';
+                    
+                    // Apply conditional formatting for PEC columns
+                    if ((col === 'Max PECsw' || col === 'Max PECsed') && racValue && !isNaN(displayValue)) {
+                        const numValue = parseFloat(displayValue);
+                        if (numValue >= racValue) {
+                            cellClass = 'exceeded';
+                        } else {
+                            cellClass = 'normal';
+                        }
+                    }
+                    
+                    tableHTML += `<td class="${cellClass}">${displayValue}</td>`;
+                });
+                tableHTML += '</tr>';
+            });
+
+            tableHTML += `
+                        </tbody>
+                    </table>
+                </div>
+            `;
+
+            tableContainer.innerHTML = tableHTML;
+        }
+
+        function exportExcel() {
+            if (!currentData) {
+                showToast('No data to export', 'warning');
+                return;
+            }
+
+            fetch('/toxswaex/export_excel', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                }
+            })
+            .then(response => {
+                if (response.ok) {
+                    return response.blob();
+                } else {
+                    return response.json().then(data => {
+                        throw new Error(data.error || 'Export failed');
+                    });
+                }
+            })
+            .then(blob => {
+                const url = window.URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = 'toxswa_extracted_data.xlsx';
+                document.body.appendChild(a);
+                a.click();
+                window.URL.revokeObjectURL(url);
+                document.body.removeChild(a);
+                showToast('Excel file exported successfully', 'success');
+            })
+            .catch(error => {
+                showToast('Error exporting Excel: ' + error.message, 'danger');
+            });
+        }
+
+        function copyTable() {
+            if (!currentData || !currentHeader) {
+                showToast('No data to copy', 'warning');
+                return;
+            }
+
+            let csvContent = currentHeader.join('\t') + '\n';
+            currentData.forEach(row => {
+                const rowData = currentHeader.map(col => row[col] || '');
+                csvContent += rowData.join('\t') + '\n';
+            });
+
+            navigator.clipboard.writeText(csvContent).then(() => {
+                showToast('Table data copied to clipboard', 'success');
+            }).catch(() => {
+                showToast('Failed to copy to clipboard', 'danger');
+            });
+        }
+
+        function resetTable() {
+            currentData = null;
+            currentHeader = null;
+            currentRacValue = null;
+            mainDir = null;
+            fullDataset = null;
+            
+            document.getElementById('dataTable').innerHTML = `
+                <div class="text-muted text-center py-5">
+                    <i class="fas fa-table fa-3x mb-3"></i>
+                    <p>No data extracted yet. Select a directory and projects to begin.</p>
+                </div>
+            `;
+            
+            document.getElementById('exportBtn').disabled = true;
+            document.getElementById('copyBtn').disabled = true;
+            document.getElementById('resetBtn').disabled = true;
+            
+            showToast('Table reset successfully', 'info');
+        }
+
+        function toggleTheme() {
+            const body = document.body;
+            const themeBtn = document.getElementById('themeBtn');
+            
+            if (isDarkMode) {
+                // Switch to light mode
+                body.classList.add('light-mode');
+                themeBtn.innerHTML = '<i class="fas fa-moon"></i> Dark Mode';
+                isDarkMode = false;
+            } else {
+                // Switch to dark mode
+                body.classList.remove('light-mode');
+                themeBtn.innerHTML = '<i class="fas fa-sun"></i> Light Mode';
+                isDarkMode = true;
+            }
+        }
+
+        // Add info button functionality and event listeners
+        document.addEventListener('DOMContentLoaded', function() {
+            // Add info button to the header
+            const cardHeader = document.querySelector('.card-header');
+            const infoBtn = document.createElement('button');
+            infoBtn.className = 'btn btn-sm btn-outline-info ms-2';
+            infoBtn.innerHTML = '<i class="fas fa-info-circle"></i>';
+            infoBtn.onclick = () => new bootstrap.Modal(document.getElementById('infoModal')).show();
+            cardHeader.querySelector('.d-flex').appendChild(infoBtn);
+
+                    // Add event listeners for real-time filtering
+        document.getElementById('racInput').addEventListener('input', function() {
+            console.log('RAC input changed, applying filters...');
+            if (fullDataset) {
+                applyFiltersAndSort();
+            } else {
+                console.log('No data available for filtering');
+            }
+        });
+        document.getElementById('compoundTypeSelect').addEventListener('change', function() {
+            console.log('Compound type changed, applying filters...');
+            if (fullDataset) {
+                applyFiltersAndSort();
+            } else {
+                console.log('No data available for filtering');
+            }
+        });
+        document.getElementById('sortSelect').addEventListener('change', function() {
+            console.log('Sort changed, applying filters...');
+            if (fullDataset) {
+                applyFiltersAndSort();
+            } else {
+                console.log('No data available for filtering');
+            }
+        });
+        });
+    </script>
+</body>
+</html> 

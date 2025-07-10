@@ -1,0 +1,34 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Modelling Tools</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+</head>
+<body>
+    <div class="container mt-5">
+        <h1 class="mb-4">Modelling Tools</h1>
+        <div class="row">
+            <div class="col-md-6 mb-3">
+                <div class="card h-100">
+                    <div class="card-body d-flex flex-column justify-content-between">
+                        <h3 class="card-title">PELMOex Tool</h3>
+                        <p class="card-text">Run the PELMOex extraction tool for FOCUS PELMO projects.</p>
+                        <a href="{{ url_for('pelmoex.pelmoex_index') }}" class="btn btn-primary mt-auto">Go to PELMOex</a>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-6 mb-3">
+                <div class="card h-100">
+                    <div class="card-body d-flex flex-column justify-content-between">
+                        <h3 class="card-title">TOXSWAex Tool</h3>
+                        <p class="card-text">Run the TOXSWAex extraction tool for FOCUS TOXSWA projects.</p>
+                        <a href="{{ url_for('toxswaex.toxswaex_index') }}" class="btn btn-success mt-auto">Go to TOXSWAex</a>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+</body>
+</html> 
