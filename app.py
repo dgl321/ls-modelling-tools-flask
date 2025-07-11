@@ -304,5 +304,132 @@ app.register_blueprint(pearlex, url_prefix='/pearlex')
 def index():
     return render_template('index.html')
 
+@app.route('/smart-tool')
+def smart_tool():
+    """Open the SMART Step 4 Tool Excel macro file"""
+    try:
+        smart_file_path = os.path.join(os.path.dirname(__file__), 'smart', 'SMART Step 4 Tool v7.xltm')
+        if os.path.exists(smart_file_path):
+            # Convert to absolute path
+            abs_path = os.path.abspath(smart_file_path)
+            
+            # Open the file with the system's default application
+            import subprocess
+            import platform
+            
+            system = platform.system()
+            if system == "Windows":
+                os.startfile(abs_path)
+            elif system == "Darwin":  # macOS
+                subprocess.run(["open", abs_path])
+            else:  # Linux
+                subprocess.run(["xdg-open", abs_path])
+            
+            # Return a proper HTML page that redirects back to dashboard
+            return '''
+            <!DOCTYPE html>
+            <html>
+            <head>
+                <title>SMART Tool Opened</title>
+                <meta http-equiv="refresh" content="2;url=/" />
+                <style>
+                    body { 
+                        font-family: Arial, sans-serif; 
+                        text-align: center; 
+                        padding: 50px; 
+                        background-color: #f8f9fa;
+                    }
+                    .message { 
+                        background: white; 
+                        padding: 30px; 
+                        border-radius: 10px; 
+                        box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+                        max-width: 400px;
+                        margin: 0 auto;
+                    }
+                    .success { color: #28a745; }
+                    .redirect { color: #6c757d; font-size: 14px; margin-top: 20px; }
+                </style>
+            </head>
+            <body>
+                <div class="message">
+                    <h2 class="success">✓ SMART Tool Opened</h2>
+                    <p>The SMART Step 4 Tool has been opened in Excel.</p>
+                    <p class="redirect">Redirecting back to dashboard...</p>
+                </div>
+            </body>
+            </html>
+            ''', 200
+        else:
+            return '''
+            <!DOCTYPE html>
+            <html>
+            <head>
+                <title>Error - SMART Tool</title>
+                <meta http-equiv="refresh" content="3;url=/" />
+                <style>
+                    body { 
+                        font-family: Arial, sans-serif; 
+                        text-align: center; 
+                        padding: 50px; 
+                        background-color: #f8f9fa;
+                    }
+                    .message { 
+                        background: white; 
+                        padding: 30px; 
+                        border-radius: 10px; 
+                        box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+                        max-width: 400px;
+                        margin: 0 auto;
+                    }
+                    .error { color: #dc3545; }
+                    .redirect { color: #6c757d; font-size: 14px; margin-top: 20px; }
+                </style>
+            </head>
+            <body>
+                <div class="message">
+                    <h2 class="error">✗ File Not Found</h2>
+                    <p>The SMART Step 4 Tool file could not be found.</p>
+                    <p class="redirect">Redirecting back to dashboard...</p>
+                </div>
+            </body>
+            </html>
+            ''', 404
+    except Exception as e:
+        return f'''
+        <!DOCTYPE html>
+        <html>
+        <head>
+            <title>Error - SMART Tool</title>
+            <meta http-equiv="refresh" content="3;url=/" />
+            <style>
+                body {{ 
+                    font-family: Arial, sans-serif; 
+                    text-align: center; 
+                    padding: 50px; 
+                    background-color: #f8f9fa;
+                }}
+                .message {{ 
+                    background: white; 
+                    padding: 30px; 
+                    border-radius: 10px; 
+                    box-shadow: 0 2px 10px rgba(0,0,0,0.1);
+                    max-width: 400px;
+                    margin: 0 auto;
+                }}
+                .error {{ color: #dc3545; }}
+                .redirect {{ color: #6c757d; font-size: 14px; margin-top: 20px; }}
+            </style>
+        </head>
+        <body>
+            <div class="message">
+                <h2 class="error">✗ Error Opening File</h2>
+                <p>Error: {str(e)}</p>
+                <p class="redirect">Redirecting back to dashboard...</p>
+            </div>
+        </body>
+        </html>
+        ''', 500
+
 if __name__ == '__main__':
     app.run(debug=True) 
