@@ -1,168 +1,226 @@
 import os
 import re
 import xlsxwriter
-import tempfile
 
 class PELMOExtractor:
     def __init__(self):
+        self.main_dir = ""
         self.all_rows = []
-        self.focus_path = ""
+        self.limit_value = None
+
+    def extract_active_substance_and_metabolites(self, file_path):
+        active_substance = None
+        active_pec_value = None
+        metabolites = []
+        metabolite = None
+
+        print(f"DEBUG: Reading file: {file_path}")
         
-    def extract_data(self, focus_path, selected_projects, limit_value=None):
-        """Extract data from PELMO files"""
+        with open(file_path, "r", encoding="ISO-8859-1") as file:
+            for line in file:
+                if "Results for ACTIVE SUBSTANCE" in line and "percolate at 1 m soil depth" in line:
+                    match = re.search(r"Results for ACTIVE SUBSTANCE \((.*?)\)", line)
+                    if match:
+                        active_substance = match.group(1)
+                        print(f"DEBUG: Found active substance: {active_substance}")
+                if active_substance and "80 Perc." in line:
+                    active_pec_value = line.split()[-1]
+                    print(f"DEBUG: Found active PEC value: {active_pec_value}")
+                if "Results for METABOLITE" in line and "percolate at 1 m soil depth" in line:
+                    match = re.search(r"Results for METABOLITE.*?\((.*?)\)", line)
+                    if match:
+                        metabolite = match.group(1)
+                        print(f"DEBUG: Found metabolite: {metabolite}")
+                if metabolite and "80 Perc." in line:
+                    pec_value = line.split()[-1]
+                    metabolites.append((metabolite, pec_value))
+                    print(f"DEBUG: Found metabolite PEC value: {metabolite} = {pec_value}")
+                    metabolite = None
+
+        print(f"DEBUG: Final results - Active: {active_substance}, PEC: {active_pec_value}, Metabolites: {metabolites}")
+        return active_substance, active_pec_value, metabolites
+
+    def extract_scenario_from_path(self, file_path):
+        folder_name = os.path.basename(os.path.dirname(file_path))
+        scenario = folder_name.split("_-_")[0] if "_-_" in folder_name else folder_name
+        return scenario
+
+    def extract_crop_from_path(self, file_path):
+        folder_parts = os.path.normpath(file_path).split(os.sep)
+        if len(folder_parts) >= 3:
+            third_last_folder = folder_parts[-3]
+            crop = third_last_folder.split(".run")[0] if ".run" in third_last_folder else third_last_folder
+            crop = crop.replace("_-_", " ")
+            return crop
+        return None
+
+    def convert_to_numeric(self, value):
         try:
-            self.focus_path = focus_path
-            self.all_rows = []
-            errors = []
+            return float(value)
+        except ValueError:
+            return value
+
+    def extract_data(self, main_dir, selected_projects, limit_value=None):
+        """Extract data from PELMO directories"""
+        self.main_dir = main_dir
+        self.limit_value = limit_value
+        all_rows = []
+        all_extra_keys = set()
+        errors = []
+
+        for project_folder_name in selected_projects:
+            project_path = os.path.join(self.main_dir, project_folder_name)
             
-            for project in selected_projects:
-                project_path = os.path.join(focus_path, project)
-                if os.path.exists(project_path):
-                    try:
-                        self.process_project(project_path, project, limit_value)
-                    except Exception as e:
-                        errors.append(f"Error processing project {project}: {str(e)}")
-                else:
-                    errors.append(f"Project path not found: {project_path}")
+            # Get all crop folders
+            crop_folders = [
+                d for d in os.listdir(project_path)
+                if os.path.isdir(os.path.join(project_path, d)) and d.endswith(".run")
+            ]
             
-            # Generate header from all unique keys
-            if self.all_rows:
-                header = ["Project", "Crop", "Scenario"]
-                all_keys = set()
-                for row in self.all_rows:
-                    all_keys.update(row.keys())
-                header.extend(sorted(all_keys - {"Project", "Crop", "Scenario"}))
-            else:
-                header = []
-            
-            return self.all_rows, header, errors
-            
-        except Exception as e:
-            return [], [], [f"Error extracting data: {str(e)}"]
-    
-    def process_project(self, project_path, project_name, limit_value=None):
-        """Process a single PELMO project"""
-        # Look for .pel files
-        pel_files = [f for f in os.listdir(project_path) if f.endswith('.pel')]
-        
-        for pel_file in pel_files:
-            file_path = os.path.join(project_path, pel_file)
-            try:
-                with open(file_path, 'r', encoding='utf-8', errors='ignore') as f:
-                    content = f.read()
+            if not crop_folders:
+                errors.append(f"No crop folders found in project '{project_folder_name}'")
+                continue
+
+            for crop_folder in crop_folders:
+                crop_folder_path = os.path.join(project_path, crop_folder)
                 
-                # Extract basic information
-                crop = self.extract_value(content, r"Crop:\s*([^\n]+)", "Unknown")
-                scenario = self.extract_value(content, r"Scenario:\s*([^\n]+)", "Unknown")
+                # Look for scenario folders
+                scenario_folders = [
+                    d for d in os.listdir(crop_folder_path)
+                    if os.path.isdir(os.path.join(crop_folder_path, d)) and "_-_" in d and d.endswith(".run")
+                ]
                 
-                # Extract PEC values
-                pec_values = self.extract_pec_values(content)
-                
-                # Create row data
-                row_data = {
-                    "Project": project_name,
-                    "Crop": crop,
-                    "Scenario": scenario
-                }
-                
-                # Add PEC values
-                for key, value in pec_values.items():
-                    if limit_value is not None:
-                        try:
-                            num_value = float(value)
-                            if num_value > limit_value:
-                                row_data[key] = f"{value} (EXCEEDED)"
-                            else:
-                                row_data[key] = value
-                        except ValueError:
-                            row_data[key] = value
-                    else:
-                        row_data[key] = value
-                
-                self.all_rows.append(row_data)
-                
-            except Exception as e:
-                print(f"Error processing {file_path}: {e}")
-    
-    def extract_value(self, content, pattern, default_value):
-        """Extract value using regex pattern"""
-        match = re.search(pattern, content, re.IGNORECASE)
-        return match.group(1).strip() if match else default_value
-    
-    def extract_pec_values(self, content):
-        """Extract PEC values from PELMO file content"""
-        pec_values = {}
+                if not scenario_folders:
+                    errors.append(f"No scenario folders found in crop folder '{crop_folder}'")
+                    continue
+
+                for scenario_folder in scenario_folders:
+                    scenario_folder_path = os.path.join(crop_folder_path, scenario_folder)
+                    period_plm_path = os.path.join(scenario_folder_path, "period.plm")
+                    
+                    if not os.path.exists(period_plm_path):
+                        errors.append(f"'period.plm' not found in scenario folder '{scenario_folder}'")
+                        continue
+                    
+                    active_substance, active_pec_value, metabolites = self.extract_active_substance_and_metabolites(period_plm_path)
+                    print(f"DEBUG: Extraction results for {scenario_folder}:")
+                    print(f"  Active substance: {active_substance}")
+                    print(f"  Active PEC value: {active_pec_value}")
+                    print(f"  Metabolites: {metabolites}")
+                    
+                    if not active_substance or not active_pec_value:
+                        print(f"DEBUG: Skipping {scenario_folder} - missing active substance or PEC value")
+                        continue
+                    
+                    row = {}
+                    row["Project"] = project_folder_name
+                    row["Crop"] = self.extract_crop_from_path(period_plm_path)
+                    row["Scenario"] = self.extract_scenario_from_path(period_plm_path)
+                    
+                    active_col = f"{active_substance} µg/l"
+                    row[active_col] = self.convert_to_numeric(active_pec_value)
+                    all_extra_keys.add(active_col)
+                    
+                    for met, pec in metabolites:
+                        colname = f"{met} µg/l"
+                        row[colname] = self.convert_to_numeric(pec)
+                        all_extra_keys.add(colname)
+                    
+                    print(f"DEBUG: Created row: {row}")
+                    all_rows.append(row)
+
+        # Build the table header
+        header = ["Project", "Crop", "Scenario"] + sorted(all_extra_keys)
+        print(f"DEBUG: Final header: {header}")
+        print(f"DEBUG: All extra keys: {sorted(all_extra_keys)}")
         
-        # Look for PEC patterns
-        pec_patterns = [
-            r"PEC\s+(\d+)\s+days:\s*([\d.]+)",
-            r"PEC\s+(\d+)\s+day:\s*([\d.]+)",
-            r"PEC\s+(\d+)\s+hours:\s*([\d.]+)",
-            r"PEC\s+(\d+)\s+hour:\s*([\d.]+)",
-        ]
+        for row in all_rows:
+            for key in header:
+                if key not in row:
+                    row[key] = ""
         
-        for pattern in pec_patterns:
-            matches = re.finditer(pattern, content, re.IGNORECASE)
-            for match in matches:
-                time_period = match.group(1)
-                value = match.group(2)
-                key = f"PEC_{time_period}_days"
-                pec_values[key] = value
-        
-        # Look for other common patterns
-        other_patterns = {
-            r"Maximum\s+PEC:\s*([\d.]+)": "Max_PEC",
-            r"Average\s+PEC:\s*([\d.]+)": "Avg_PEC",
-            r"Total\s+Deposition:\s*([\d.]+)": "Total_Deposition",
-        }
-        
-        for pattern, key in other_patterns.items():
-            match = re.search(pattern, content, re.IGNORECASE)
-            if match:
-                pec_values[key] = match.group(1)
-        
-        return pec_values
-    
+        print(f"DEBUG: Final rows count: {len(all_rows)}")
+        for i, row in enumerate(all_rows):
+            print(f"DEBUG: Row {i}: {row}")
+
+        self.all_rows = all_rows
+        return all_rows, header, errors
+
     def export_to_excel(self, filepath):
         """Export data to Excel file"""
-        if not self.all_rows:
-            return
-        
         workbook = xlsxwriter.Workbook(filepath)
         
-        # Create formats
-        header_format = workbook.add_format({
-            "bg_color": "#82C940",
-            "font_color": "#000000",
-            "bold": True,
-            "align": "left",
-        })
-        
-        exceeded_format = workbook.add_format({
-            "font_color": "red",
-            "bold": True,
-        })
-        
-        # Create worksheet
-        worksheet = workbook.add_worksheet("PELMO_Data")
-        
-        # Write headers
-        if self.all_rows:
-            headers = list(self.all_rows[0].keys())
-            for col, header in enumerate(headers):
-                worksheet.write(0, col, header, header_format)
+        # Group rows by project
+        projects = {}
+        for row in self.all_rows:
+            proj = row["Project"]
+            projects.setdefault(proj, []).append(row)
+
+        used_sheet_names = set()
+        for project, rows in projects.items():
+            # Create sheet name - remove .run extension and clean up
+            sheet_name = project[:-4] if project.lower().endswith(".run") else project
+            # Replace problematic characters and ensure it's under 31 chars
+            sheet_name = sheet_name.replace('_-_', '_').replace('-', '_')
+            if len(sheet_name) > 31:
+                sheet_name = sheet_name[:28]  # Leave room for potential numbering
+            orig_sheet_name = sheet_name
+            count = 1
+            while sheet_name in used_sheet_names:
+                sheet_name = f"{orig_sheet_name}_{count}"
+                if len(sheet_name) > 31:
+                    sheet_name = f"{orig_sheet_name[:25]}_{count}"
+                count += 1
+            used_sheet_names.add(sheet_name)
+
+            worksheet = workbook.add_worksheet(sheet_name)
             
-            # Write data
-            for row_idx, row in enumerate(self.all_rows, 1):
-                for col_idx, header in enumerate(headers):
-                    value = row.get(header, "")
-                    if "EXCEEDED" in str(value):
-                        worksheet.write(row_idx, col_idx, value, exceeded_format)
-                    else:
-                        worksheet.write(row_idx, col_idx, value)
-            
-            # Auto-fit columns
-            for col in range(len(headers)):
-                worksheet.set_column(col, col, 15)
-        
+            # Re-calculate header for this project
+            header = ["Project", "Crop", "Scenario"]
+            extra_keys = set()
+            for row in rows:
+                for key in row.keys():
+                    if key not in ["Project", "Crop", "Scenario"]:
+                        extra_keys.add(key)
+            header.extend(sorted(extra_keys))
+
+            header_format = workbook.add_format({"bold": True, "bg_color": "#DFF0D8", "border": 1})
+            for col, header_text in enumerate(header):
+                worksheet.write(0, col, header_text, header_format)
+
+            for r, row in enumerate(rows, start=1):
+                for col, key in enumerate(header):
+                    value = row.get(key, "")
+                    try:
+                        num_value = float(value)
+                        worksheet.write_number(r, col, num_value)
+                    except ValueError:
+                        worksheet.write(r, col, value)
+
+            # Adjust column widths
+            for col in range(len(header)):
+                max_width = len(header[col])
+                for row in rows:
+                    cell_text = str(row.get(header[col], ""))
+                    max_width = max(max_width, len(cell_text))
+                worksheet.set_column(col, col, max_width + 2)
+
+            # Apply conditional formatting if limit is set
+            if self.limit_value is not None:
+                red_format = workbook.add_format({"font_color": "red"})
+                green_format = workbook.add_format({"font_color": "green"})
+                for col in range(3, len(header)):
+                    worksheet.conditional_format(1, col, len(rows), col, {
+                        "type": "cell",
+                        "criteria": ">=",
+                        "value": self.limit_value,
+                        "format": red_format,
+                    })
+                    worksheet.conditional_format(1, col, len(rows), col, {
+                        "type": "cell",
+                        "criteria": "<",
+                        "value": self.limit_value,
+                        "format": green_format,
+                    })
+
         workbook.close() 
