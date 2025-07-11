@@ -295,7 +295,19 @@
                 <div class="card">
                     <div class="card-header d-flex justify-content-between align-items-center">
                         <h5 class="mb-0">Extracted Data</h5>
-                        <div>
+                        <div class="d-flex align-items-center gap-2">
+                            <!-- Filter Controls -->
+                            <select class="form-select form-select-sm" id="compoundTypeSelect" style="width: auto; min-width: 120px; display: none;">
+                                <option value="All">All Compounds</option>
+                                <option value="Parent">Parent</option>
+                                <option value="Metabolite">Metabolite</option>
+                            </select>
+                            <select class="form-select form-select-sm" id="sortSelect" style="width: auto; min-width: 120px; display: none;">
+                                <option value="Filename">Sort: Filename</option>
+                                <option value="Compound">Sort: Compound</option>
+                                <option value="Scenario">Sort: Scenario</option>
+                            </select>
+                            <!-- Action Buttons -->
                             <button class="btn btn-sm btn-outline-secondary" onclick="toggleTheme()" id="themeBtn">
                                 <i class="fas fa-sun"></i> Light Mode
                             </button>
@@ -467,6 +479,11 @@
                     fullDataset = data.data; // Store the complete dataset
                     extractedData = data.data;
                     displayData(data.data);
+                    
+                    // Show filter controls
+                    document.getElementById('compoundTypeSelect').style.display = 'inline-block';
+                    document.getElementById('sortSelect').style.display = 'inline-block';
+                    
                     document.getElementById('exportBtn').disabled = false;
                     document.getElementById('copyBtn').disabled = false;
                     document.getElementById('resetBtn').disabled = false;
@@ -615,19 +632,45 @@
             return numValue > limitValue ? 'exceeded' : 'normal';
         }
         
-        function applyLimitFilter() {
+        function applyFiltersAndSort() {
             if (!fullDataset) return;
             
             const limitValue = parseFloat(document.getElementById('limitSelect').value) || null;
+            const compoundType = document.getElementById('compoundTypeSelect').value;
+            const sortBy = document.getElementById('sortSelect').value;
             
-            // Update the displayed data with new limit filtering
-            const filteredData = fullDataset.map(row => ({
+            // Filter by compound type
+            let filteredData = fullDataset.filter(row => {
+                if (compoundType === 'All') return true;
+                return row.compound_type === compoundType;
+            });
+            
+            // Sort the filtered data
+            filteredData.sort((a, b) => {
+                switch (sortBy) {
+                    case 'Filename':
+                        return (a.filename || '').localeCompare(b.filename || '');
+                    case 'Compound':
+                        return (a.compound || '').localeCompare(b.compound || '');
+                    case 'Scenario':
+                        return (a.scenario || '').localeCompare(b.scenario || '');
+                    default:
+                        return 0;
+                }
+            });
+            
+            // Apply limit highlighting
+            filteredData = filteredData.map(row => ({
                 ...row,
                 exceeds_limit: limitValue ? parseFloat(row.value) > limitValue : false
             }));
             
             extractedData = filteredData;
             displayData(filteredData);
+        }
+        
+        function applyLimitFilter() {
+            applyFiltersAndSort();
         }
 
         function exportExcel() {
@@ -712,6 +755,10 @@
                 item.classList.remove('selecting');
             });
             
+            // Hide filter controls
+            document.getElementById('compoundTypeSelect').style.display = 'none';
+            document.getElementById('sortSelect').style.display = 'none';
+            
             document.getElementById('dataTable').innerHTML = `
                 <div class="text-muted text-center py-5">
                     <i class="fas fa-table fa-3x mb-3"></i>
@@ -747,6 +794,19 @@
             document.getElementById('limitSelect').addEventListener('change', function() {
                 if (fullDataset) {
                     applyLimitFilter();
+                }
+            });
+            
+            // Add event listeners for compound type and sort filters
+            document.getElementById('compoundTypeSelect').addEventListener('change', function() {
+                if (fullDataset) {
+                    applyFiltersAndSort();
+                }
+            });
+            
+            document.getElementById('sortSelect').addEventListener('change', function() {
+                if (fullDataset) {
+                    applyFiltersAndSort();
                 }
             });
         });
