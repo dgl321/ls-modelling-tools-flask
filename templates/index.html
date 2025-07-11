@@ -10,7 +10,7 @@
     <div class="container mt-5">
         <h1 class="mb-4">Modelling Tools</h1>
         <div class="row">
-            <div class="col-md-6 mb-3">
+            <div class="col-md-4 mb-3">
                 <div class="card h-100">
                     <div class="card-body d-flex flex-column justify-content-between">
                         <h3 class="card-title">PELMOex Tool</h3>
@@ -19,12 +19,21 @@
                     </div>
                 </div>
             </div>
-            <div class="col-md-6 mb-3">
+            <div class="col-md-4 mb-3">
                 <div class="card h-100">
                     <div class="card-body d-flex flex-column justify-content-between">
                         <h3 class="card-title">TOXSWAex Tool</h3>
                         <p class="card-text">Run the TOXSWAex extraction tool for FOCUS TOXSWA projects.</p>
                         <a href="{{ url_for('toxswaex.toxswaex_index') }}" class="btn btn-success mt-auto">Go to TOXSWAex</a>
+                    </div>
+                </div>
+            </div>
+            <div class="col-md-4 mb-3">
+                <div class="card h-100">
+                    <div class="card-body d-flex flex-column justify-content-between">
+                        <h3 class="card-title">PEARLex Tool</h3>
+                        <p class="card-text">Run the PEARLex extraction tool for FOCUS PEARL projects.</p>
+                        <a href="{{ url_for('pearlex.pearlex_index') }}" class="btn btn-warning mt-auto">Go to PEARLex</a>
                     </div>
                 </div>
             </div>

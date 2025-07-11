@@ -1,0 +1,244 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>PEARLex Extractor</title>
+    <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
+    <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
+    <style>
+        body {
+            background-color: #121212;
+            color: #E0E0E0;
+            font-family: 'Segoe UI', sans-serif;
+        }
+        .card {
+            background-color: #1E1E1E;
+            border: 1px solid #2E2E2E;
+        }
+        .btn-primary {
+            background-color: #2D2D30;
+            border-color: #3E3A3F;
+        }
+        .btn-primary:hover {
+            background-color: #3A3A3F;
+            border-color: #3E3A3F;
+        }
+        .form-control, .form-select {
+            background-color: #1E1E1E;
+            border: 1px solid #3E3A3F;
+            color: #E0E0E0;
+        }
+        .form-control:focus, .form-select:focus {
+            background-color: #1E1E1E;
+            border-color: #007bff;
+            color: #E0E0E0;
+            box-shadow: 0 0 0 0.2rem rgba(0, 123, 255, 0.25);
+        }
+        .table {
+            background-color: #1E1E1E;
+            color: #E0E0E0;
+        }
+        .table th {
+            background-color: #2E2E2E;
+            border-color: #3E3A3F;
+        }
+        .table td {
+            border-color: #3E3A3F;
+        }
+        .list-group {
+            background-color: #1E1E1E;
+            border: 1px solid #3E3A3F;
+        }
+        .list-group-item {
+            background-color: #1E1E1E;
+            border-color: #3E3A3F;
+            color: #E0E0E0;
+        }
+        .list-group-item:hover {
+            background-color: #2E2E2E;
+        }
+        .list-group-item.active {
+            background-color: #007bff;
+            border-color: #007bff;
+        }
+        .alert {
+            background-color: #1E1E1E;
+            border-color: #3E3A3F;
+        }
+        .logo-container {
+            text-align: center;
+            margin-bottom: 20px;
+        }
+        .logo {
+            max-width: 200px;
+            height: auto;
+        }
+        .loading {
+            display: none;
+        }
+        .spinner-border-sm {
+            width: 1rem;
+            height: 1rem;
+        }
+        .toast-container {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            z-index: 9999;
+        }
+        .toast {
+            background-color: #1E1E1E;
+            border: 1px solid #3E3A3F;
+            color: #E0E0E0;
+            min-width: 300px;
+        }
+    </style>
+</head>
+<body>
+    <div class="container-fluid mt-3">
+        <div class="row">
+            <!-- Left Side: File/Project Selection -->
+            <div class="col-md-3">
+                <div class="card">
+                    <div class="card-body">
+                        <div class="logo-container">
+                            <img src="{{ url_for('pearlex.static', filename='ls.png') }}" alt="PEARLex Logo" class="logo">
+                            <h4 class="mt-2 text-warning">PEARLex Extractor v1</h4>
+                        </div>
+                        
+                        <div class="mb-3">
+                            <button class="btn btn-sm btn-outline-secondary w-100" onclick="window.location.href='/'">
+                                <i class="fas fa-home me-1"></i>Back to Dashboard
+                            </button>
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="directoryInput" class="form-label">PEARL Directory Path:</label>
+                            <div class="input-group">
+                                <input type="text" class="form-control" id="directoryInput" value="C:\PEARL_Projects" placeholder="Enter directory path...">
+                                <button class="btn btn-secondary" type="button" onclick="scanDirectory()">
+                                    <i class="fas fa-search"></i> Scan
+                                </button>
+                            </div>
+                        </div>
+
+                        <div class="mb-3">
+                            <label class="form-label">Select Project(s):</label>
+                            <div id="projectList" class="list-group" style="max-height: 300px; overflow-y: auto;">
+                                <div class="text-muted text-center py-3">No projects available</div>
+                            </div>
+                        </div>
+
+                        <div class="mb-3">
+                            <label for="limitSelect" class="form-label">Parametric Limit:</label>
+                            <select class="form-select" id="limitSelect">
+                                <option value="">No limit</option>
+                                <option value="0.1">0.1 µg/l</option>
+                                <option value="0.001">0.001 µg/l</option>
+                            </select>
+                        </div>
+
+                        <div class="d-grid gap-2">
+                            <button class="btn btn-success" onclick="extractData()" id="extractBtn">
+                                <span class="loading">
+                                    <span class="spinner-border spinner-border-sm me-2"></span>
+                                </span>
+                                <i class="fas fa-download me-2"></i>Extract Data
+                            </button>
+                            <button class="btn btn-info" onclick="exportExcel()" id="exportBtn" disabled>
+                                <i class="fas fa-file-excel me-2"></i>Export to Excel
+                            </button>
+                        </div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Right Side: Data Display -->
+            <div class="col-md-9">
+                <div class="card">
+                    <div class="card-header d-flex justify-content-between align-items-center">
+                        <h5 class="mb-0">Extracted Data</h5>
+                        <div>
+                            <button class="btn btn-sm btn-outline-secondary" onclick="toggleTheme()" id="themeBtn">
+                                <i class="fas fa-sun"></i> Light Mode
+                            </button>
+                            <button class="btn btn-sm btn-outline-secondary" onclick="copyTable()" id="copyBtn" disabled>
+                                <i class="fas fa-copy"></i> Copy
+                            </button>
+                            <button class="btn btn-sm btn-outline-warning" onclick="resetTable()" id="resetBtn" disabled>
+                                <i class="fas fa-undo"></i> Reset
+                            </button>
+                        </div>
+                    </div>
+                    <div class="card-body">
+                        <div id="dataTable">
+                            <div class="text-muted text-center py-5">
+                                <i class="fas fa-table fa-3x mb-3"></i>
+                                <p>PEARLex extraction tool is not yet implemented.</p>
+                                <p>This is a placeholder for the PEARLex extraction functionality.</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+
+    <!-- Toast Container -->
+    <div class="toast-container" id="toastContainer"></div>
+
+    <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
+    <script>
+        function showToast(message, type = 'info') {
+            const toastContainer = document.getElementById('toastContainer');
+            const toastId = 'toast-' + Date.now();
+            
+            const toastHtml = `
+                <div class="toast" id="${toastId}" role="alert" aria-live="assertive" aria-atomic="true">
+                    <div class="toast-header" style="background-color: ${type === 'success' ? '#28a745' : type === 'danger' ? '#dc3545' : type === 'warning' ? '#ffc107' : '#17a2b8'}; color: white;">
+                        <strong class="me-auto">${type.charAt(0).toUpperCase() + type.slice(1)}</strong>
+                        <button type="button" class="btn-close btn-close-white" data-bs-dismiss="toast"></button>
+                    </div>
+                    <div class="toast-body">
+                        ${message}
+                    </div>
+                </div>
+            `;
+            
+            toastContainer.insertAdjacentHTML('beforeend', toastHtml);
+            const toastElement = document.getElementById(toastId);
+            const toast = new bootstrap.Toast(toastElement, { delay: 4000 });
+            toast.show();
+            
+            toastElement.addEventListener('hidden.bs.toast', () => {
+                toastElement.remove();
+            });
+        }
+
+        function scanDirectory() {
+            showToast('PEARLex functionality not yet implemented', 'warning');
+        }
+
+        function extractData() {
+            showToast('PEARLex extraction not yet implemented', 'warning');
+        }
+
+        function exportExcel() {
+            showToast('PEARLex export not yet implemented', 'warning');
+        }
+
+        function copyTable() {
+            showToast('PEARLex copy not yet implemented', 'warning');
+        }
+
+        function resetTable() {
+            showToast('PEARLex reset not yet implemented', 'warning');
+        }
+
+        function toggleTheme() {
+            showToast('Theme toggle not yet implemented', 'warning');
+        }
+    </script>
+</body>
+</html> 
