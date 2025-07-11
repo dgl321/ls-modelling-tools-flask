@@ -14,9 +14,11 @@ pelmoex_bp = Blueprint('pelmoex', __name__,
                       template_folder='pelmoex/templates',
                       static_folder='pelmoex/static')
 
+# Import pearlex blueprint
+from pearlex.routes import pearlex
+
 # Global extractor instances
 pelmo_extractor = PELMOExtractor()
-pearl_extractor = PEARLexExtractor()
 
 @pelmoex_bp.route('/')
 def pelmoex_index():
@@ -293,68 +295,10 @@ def toxswaex_get_table_data():
     except Exception as e:
         return jsonify({'error': f'Error getting table data: {str(e)}'})
 
-# PEARLex Blueprint
-pearlex_bp = Blueprint('pearlex', __name__,
-                       template_folder='pearlex/templates',
-                       static_folder='pearlex/static')
-
-@pearlex_bp.route('/')
-def pearlex_index():
-    return render_template('pearlex/index.html')
-
-@pearlex_bp.route('/scan_directory', methods=['POST'])
-def pearlex_scan_directory():
-    try:
-        data = request.get_json()
-        directory = data.get('directory', '').strip()
-        
-        if not directory:
-            return jsonify({'error': 'Please provide a directory path'})
-        
-        if not os.path.exists(directory):
-            return jsonify({'error': f'Directory does not exist: {directory}'})
-        
-        # Placeholder for PEARL directory scanning
-        return jsonify({
-            'error': 'PEARLex functionality not yet implemented'
-        })
-        
-    except Exception as e:
-        return jsonify({'error': f'Error scanning directory: {str(e)}'})
-
-@pearlex_bp.route('/extract_data', methods=['POST'])
-def pearlex_extract_data():
-    try:
-        data = request.get_json()
-        main_dir = data.get('main_dir', '')
-        selected_projects = data.get('selected_projects', [])
-        limit_value = data.get('limit_value', None)
-        
-        if not main_dir:
-            return jsonify({'error': 'No main directory specified'})
-        
-        if not selected_projects:
-            return jsonify({'error': 'No projects selected'})
-        
-        # Placeholder for PEARLex data extraction
-        return jsonify({
-            'error': 'PEARLex extraction not yet implemented'
-        })
-        
-    except Exception as e:
-        return jsonify({'error': f'Error extracting data: {str(e)}'})
-
-@pearlex_bp.route('/export_excel', methods=['POST'])
-def pearlex_export_excel():
-    try:
-        return jsonify({'error': 'PEARLex export not yet implemented'})
-    except Exception as e:
-        return jsonify({'error': f'Error exporting Excel: {str(e)}'})
-
 # Register blueprints
 app.register_blueprint(pelmoex_bp, url_prefix='/pelmoex')
 app.register_blueprint(toxswaex_bp, url_prefix='/toxswaex')
-app.register_blueprint(pearlex_bp, url_prefix='/pearlex')
+app.register_blueprint(pearlex, url_prefix='/pearlex')
 
 @app.route('/')
 def index():

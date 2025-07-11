@@ -46,6 +46,13 @@
         .table td {
             border-color: #3E3A3F;
         }
+        /* Fix dark mode table hover - ensure text remains visible */
+        .table-hover tbody tr:hover {
+            background-color: #2E2E2E !important;
+        }
+        .table-hover tbody tr:hover td {
+            color: #E0E0E0 !important;
+        }
         .list-group {
             background-color: #1E1E1E;
             border: 1px solid #3E3A3F;
@@ -65,6 +72,13 @@
         .alert {
             background-color: #1E1E1E;
             border-color: #3E3A3F;
+        }
+        .exceeded {
+            color: #ff6b6b !important;
+            font-weight: bold;
+        }
+        .normal {
+            color: #51cf66 !important;
         }
         .logo-container {
             text-align: center;
@@ -92,6 +106,124 @@
             border: 1px solid #3E3A3F;
             color: #E0E0E0;
             min-width: 300px;
+        }
+        
+        /* Light mode styles */
+        body.light-mode {
+            background-color: #F0F0F0;
+            color: #202020;
+        }
+        
+        body.light-mode .card {
+            background-color: #FFFFFF;
+            border: 1px solid #C0C0C0;
+        }
+        
+        body.light-mode .btn-primary {
+            background-color: #E0E0E0;
+            border-color: #A0A0A0;
+            color: #202020;
+        }
+        
+        body.light-mode .btn-primary:hover {
+            background-color: #D0D0D0;
+            border-color: #A0A0A0;
+        }
+        
+        body.light-mode .form-control,
+        body.light-mode .form-select {
+            background-color: #FFFFFF;
+            border: 1px solid #A0A0A0;
+            color: #202020;
+        }
+        
+        body.light-mode .form-control:focus,
+        body.light-mode .form-select:focus {
+            background-color: #FFFFFF;
+            border-color: #007bff;
+            color: #202020;
+        }
+        
+        body.light-mode .table {
+            background-color: #FFFFFF;
+            color: #202020;
+        }
+        
+        body.light-mode .table th {
+            background-color: #E0E0E0;
+            border-color: #C0C0C0;
+        }
+        
+        body.light-mode .table td {
+            border-color: #C0C0C0;
+        }
+        
+        body.light-mode .list-group {
+            background-color: #FFFFFF;
+            border: 1px solid #A0A0A0;
+        }
+        
+        body.light-mode .list-group-item {
+            background-color: #FFFFFF;
+            border-color: #A0A0A0;
+            color: #202020;
+        }
+        
+        body.light-mode .list-group-item:hover {
+            background-color: #F0F0F0;
+        }
+        
+        body.light-mode .toast {
+            background-color: #FFFFFF;
+            border: 1px solid #A0A0A0;
+            color: #202020;
+        }
+        
+        body.light-mode .exceeded {
+            color: #dc3545 !important;
+        }
+        
+        body.light-mode .normal {
+            color: #28a745 !important;
+        }
+        
+        /* Multi-select styles */
+        .project-item {
+            cursor: pointer;
+            user-select: none;
+            transition: background-color 0.2s;
+        }
+        
+        .project-item.selecting {
+            background-color: #007bff !important;
+            color: white !important;
+        }
+        
+        .project-item.selecting .form-check-label {
+            color: white !important;
+        }
+        
+        .project-item.selecting .form-check-input {
+            border-color: white;
+        }
+        
+        body.light-mode .project-item.selecting {
+            background-color: #007bff !important;
+            color: white !important;
+        }
+        
+        body.light-mode .project-item.selecting .form-check-label {
+            color: white !important;
+        }
+        
+        .multi-select-hint {
+            font-size: 0.8em;
+            color: #6c757d;
+            margin-top: 5px;
+        }
+        
+        body.light-mode .multi-select-hint {
+            color: #6c757d;
         }
     </style>
 </head>
@@ -127,6 +259,10 @@
                             <label class="form-label">Select Project(s):</label>
                             <div id="projectList" class="list-group" style="max-height: 300px; overflow-y: auto;">
                                 <div class="text-muted text-center py-3">No projects available</div>
+                            </div>
+                            <div class="multi-select-hint">
+                                <i class="fas fa-info-circle"></i> 
+                                Tip: Click and drag to select multiple projects, or hold Ctrl/Cmd to select individual projects
                             </div>
                         </div>
 
@@ -216,29 +352,404 @@
             });
         }
 
+        let extractedData = [];
+        let currentDirectory = '';
+        let isDarkMode = true;
+        let fullDataset = null; // Store the complete dataset
+        
+        // Multi-select variables
+        let isSelecting = false;
+        let lastSelectedIndex = -1;
+        let selectedRange = [];
+
         function scanDirectory() {
-            showToast('PEARLex functionality not yet implemented', 'warning');
+            const directoryInput = document.getElementById('directoryInput');
+            const directory = directoryInput.value.trim();
+            
+            if (!directory) {
+                showToast('Please enter a directory path', 'warning');
+                return;
+            }
+            
+            // Show loading state
+            const scanBtn = document.querySelector('button[onclick="scanDirectory()"]');
+            const originalText = scanBtn.innerHTML;
+            scanBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Scanning...';
+            scanBtn.disabled = true;
+            
+            fetch('/pearlex/scan_directory', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ directory: directory })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    currentDirectory = directory;
+                    displayProjects(data.projects);
+                    showToast(`Found ${data.projects.length} .sum files`, 'success');
+                } else {
+                    showToast(data.error || 'Error scanning directory', 'danger');
+                }
+            })
+            .catch(error => {
+                showToast('Error scanning directory: ' + error.message, 'danger');
+            })
+            .finally(() => {
+                scanBtn.innerHTML = originalText;
+                scanBtn.disabled = false;
+            });
+        }
+
+        function displayProjects(projects) {
+            const projectList = document.getElementById('projectList');
+            
+            if (projects.length === 0) {
+                projectList.innerHTML = '<div class="text-muted text-center py-3">No .sum files found</div>';
+                return;
+            }
+            
+            projectList.innerHTML = '';
+            projects.forEach((project, index) => {
+                const item = document.createElement('div');
+                item.className = 'list-group-item list-group-item-action project-item';
+                item.innerHTML = `
+                    <div class="form-check">
+                        <input class="form-check-input project-checkbox" type="checkbox" value="${project.path}" id="project_${project.path.replace(/[^a-zA-Z0-9]/g, '_')}">
+                        <label class="form-check-label" for="project_${project.path.replace(/[^a-zA-Z0-9]/g, '_')}">
+                            ${project.filename}
+                        </label>
+                    </div>
+                `;
+                projectList.appendChild(item);
+            });
+            
+            // Setup multi-select functionality
+            setupMultiSelect();
         }
 
         function extractData() {
-            showToast('PEARLex extraction not yet implemented', 'warning');
+            const selectedProjects = getSelectedProjects();
+            const limitValue = document.getElementById('limitSelect').value;
+            
+            if (selectedProjects.length === 0) {
+                showToast('Please select at least one project', 'warning');
+                return;
+            }
+            
+            if (!currentDirectory) {
+                showToast('Please scan a directory first', 'warning');
+                return;
+            }
+            
+            // Show loading state
+            const extractBtn = document.getElementById('extractBtn');
+            const originalText = extractBtn.innerHTML;
+            extractBtn.innerHTML = '<span class="spinner-border spinner-border-sm me-2"></span>Extracting...';
+            extractBtn.disabled = true;
+            
+            fetch('/pearlex/extract_data', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    directory: currentDirectory,
+                    selected_files: selectedProjects,
+                    limit_value: limitValue
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    fullDataset = data.data; // Store the complete dataset
+                    extractedData = data.data;
+                    displayData(data.data);
+                    document.getElementById('exportBtn').disabled = false;
+                    document.getElementById('copyBtn').disabled = false;
+                    document.getElementById('resetBtn').disabled = false;
+                    showToast(`Extracted ${data.data.length} data points`, 'success');
+                } else {
+                    showToast(data.error || 'Error extracting data', 'danger');
+                }
+            })
+            .catch(error => {
+                showToast('Error extracting data: ' + error.message, 'danger');
+            })
+            .finally(() => {
+                extractBtn.innerHTML = originalText;
+                extractBtn.disabled = false;
+            });
+        }
+
+        // Multi-select functionality
+        function setupMultiSelect() {
+            const projectList = document.getElementById('projectList');
+            const projectItems = projectList.querySelectorAll('.project-item');
+            
+            projectItems.forEach((item, index) => {
+                const checkbox = item.querySelector('.project-checkbox');
+                
+                // Mouse events for drag selection
+                item.addEventListener('mousedown', (e) => {
+                    if (e.target === checkbox || e.target.closest('.form-check')) {
+                        return; // Don't interfere with checkbox clicks
+                    }
+                    
+                    e.preventDefault();
+                    isSelecting = true;
+                    lastSelectedIndex = index;
+                    
+                    // Toggle current item
+                    checkbox.checked = !checkbox.checked;
+                    updateItemSelection(item, checkbox.checked);
+                    
+                    selectedRange = [index];
+                });
+                
+                item.addEventListener('mouseenter', (e) => {
+                    if (isSelecting && e.target !== checkbox && !e.target.closest('.form-check')) {
+                        // Select all items in the range
+                        const start = Math.min(lastSelectedIndex, index);
+                        const end = Math.max(lastSelectedIndex, index);
+                        
+                        for (let i = 0; i < projectItems.length; i++) {
+                            const currentItem = projectItems[i];
+                            const currentCheckbox = currentItem.querySelector('.project-checkbox');
+                            const shouldSelect = i >= start && i <= end;
+                            
+                            if (currentCheckbox.checked !== shouldSelect) {
+                                currentCheckbox.checked = shouldSelect;
+                                updateItemSelection(currentItem, shouldSelect);
+                            }
+                        }
+                        
+                        selectedRange = [];
+                        for (let i = start; i <= end; i++) {
+                            selectedRange.push(i);
+                        }
+                    }
+                });
+                
+                // Checkbox click handler
+                checkbox.addEventListener('click', (e) => {
+                    e.stopPropagation();
+                    updateItemSelection(item, checkbox.checked);
+                });
+            });
+            
+            // Global mouse up handler
+            document.addEventListener('mouseup', () => {
+                isSelecting = false;
+                selectedRange = [];
+            });
+        }
+        
+        function updateItemSelection(item, isSelected) {
+            if (isSelected) {
+                item.classList.add('selecting');
+            } else {
+                item.classList.remove('selecting');
+            }
+        }
+
+        function getSelectedProjects() {
+            const checkboxes = document.querySelectorAll('#projectList input[type="checkbox"]:checked');
+            return Array.from(checkboxes).map(cb => ({
+                path: cb.value,
+                filename: cb.closest('.list-group-item').querySelector('label').textContent.trim()
+            }));
+        }
+
+        function displayData(data) {
+            const dataTable = document.getElementById('dataTable');
+            const limitValue = parseFloat(document.getElementById('limitSelect').value) || null;
+            
+            if (data.length === 0) {
+                dataTable.innerHTML = '<div class="text-muted text-center py-5">No data to display</div>';
+                return;
+            }
+            
+            const table = document.createElement('table');
+            table.className = 'table table-hover';
+            
+            // Create header
+            const thead = document.createElement('thead');
+            thead.innerHTML = `
+                <tr>
+                    <th>Project</th>
+                    <th>Filename</th>
+                    <th>Compound Type</th>
+                    <th>Scenario</th>
+                    <th>Compound</th>
+                    <th>80th Percentile (µg/L)</th>
+                </tr>
+            `;
+            table.appendChild(thead);
+            
+            // Create body
+            const tbody = document.createElement('tbody');
+            data.forEach(row => {
+                const tr = document.createElement('tr');
+                tr.innerHTML = `
+                    <td>${row.project}</td>
+                    <td>${row.filename}</td>
+                    <td>${row.compound_type}</td>
+                    <td>${row.scenario}</td>
+                    <td>${row.compound}</td>
+                    <td class="${getValueClass(row.value, limitValue)}">${row.value}</td>
+                `;
+                tbody.appendChild(tr);
+            });
+            table.appendChild(tbody);
+            
+            dataTable.innerHTML = '';
+            dataTable.appendChild(table);
+        }
+        
+        function getValueClass(value, limitValue) {
+            if (!limitValue || isNaN(value)) return '';
+            const numValue = parseFloat(value);
+            return numValue > limitValue ? 'exceeded' : 'normal';
+        }
+        
+        function applyLimitFilter() {
+            if (!fullDataset) return;
+            
+            const limitValue = parseFloat(document.getElementById('limitSelect').value) || null;
+            
+            // Update the displayed data with new limit filtering
+            const filteredData = fullDataset.map(row => ({
+                ...row,
+                exceeds_limit: limitValue ? parseFloat(row.value) > limitValue : false
+            }));
+            
+            extractedData = filteredData;
+            displayData(filteredData);
         }
 
         function exportExcel() {
-            showToast('PEARLex export not yet implemented', 'warning');
+            if (extractedData.length === 0) {
+                showToast('No data to export', 'warning');
+                return;
+            }
+            
+            const limitValue = document.getElementById('limitSelect').value;
+            
+            fetch('/pearlex/export_excel', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    data: extractedData,
+                    limit_value: limitValue
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    // Create a download link for the file
+                    const link = document.createElement('a');
+                    link.href = `/pearlex/download_excel/${encodeURIComponent(data.file_path)}`;
+                    link.download = 'pearlex_data.xlsx';
+                    document.body.appendChild(link);
+                    link.click();
+                    document.body.removeChild(link);
+                    showToast('Excel file exported successfully', 'success');
+                } else {
+                    showToast(data.error || 'Error exporting Excel', 'danger');
+                }
+            })
+            .catch(error => {
+                showToast('Error exporting Excel: ' + error.message, 'danger');
+            });
         }
 
         function copyTable() {
-            showToast('PEARLex copy not yet implemented', 'warning');
+            if (extractedData.length === 0) {
+                showToast('No data to copy', 'warning');
+                return;
+            }
+            
+            const table = document.querySelector('#dataTable table');
+            if (!table) {
+                showToast('No table to copy', 'warning');
+                return;
+            }
+            
+            // Create CSV content
+            const rows = Array.from(table.querySelectorAll('tr'));
+            const csvContent = rows.map(row => 
+                Array.from(row.querySelectorAll('th, td'))
+                    .map(cell => `"${cell.textContent.trim()}"`)
+                    .join(',')
+            ).join('\n');
+            
+            // Copy to clipboard
+            navigator.clipboard.writeText(csvContent).then(() => {
+                showToast('Table copied to clipboard', 'success');
+            }).catch(() => {
+                showToast('Failed to copy to clipboard', 'warning');
+            });
         }
 
         function resetTable() {
-            showToast('PEARLex reset not yet implemented', 'warning');
+            extractedData = [];
+            fullDataset = null;
+            
+            // Clear project selection checkboxes
+            const projectCheckboxes = document.querySelectorAll('#projectList input[type="checkbox"]');
+            projectCheckboxes.forEach(checkbox => {
+                checkbox.checked = false;
+            });
+            
+            // Clear any visual selection highlighting
+            const projectItems = document.querySelectorAll('.project-item');
+            projectItems.forEach(item => {
+                item.classList.remove('selecting');
+            });
+            
+            document.getElementById('dataTable').innerHTML = `
+                <div class="text-muted text-center py-5">
+                    <i class="fas fa-table fa-3x mb-3"></i>
+                    <p>No data to display</p>
+                </div>
+            `;
+            document.getElementById('exportBtn').disabled = true;
+            document.getElementById('copyBtn').disabled = true;
+            document.getElementById('resetBtn').disabled = true;
+            showToast('Table and project selection reset successfully', 'info');
         }
 
         function toggleTheme() {
-            showToast('Theme toggle not yet implemented', 'warning');
+            const body = document.body;
+            const themeBtn = document.getElementById('themeBtn');
+            
+            if (isDarkMode) {
+                // Switch to light mode
+                body.classList.add('light-mode');
+                themeBtn.innerHTML = '<i class="fas fa-moon"></i> Dark Mode';
+                isDarkMode = false;
+            } else {
+                // Switch to dark mode
+                body.classList.remove('light-mode');
+                themeBtn.innerHTML = '<i class="fas fa-sun"></i> Light Mode';
+                isDarkMode = true;
+            }
         }
+        
+        // Add event listeners for real-time filtering
+        document.addEventListener('DOMContentLoaded', function() {
+            // Add event listener for limit select
+            document.getElementById('limitSelect').addEventListener('change', function() {
+                if (fullDataset) {
+                    applyLimitFilter();
+                }
+            });
+        });
     </script>
 </body>
 </html> 
