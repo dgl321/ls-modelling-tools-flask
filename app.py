@@ -475,5 +475,32 @@ app.register_blueprint(pearlex_bp, url_prefix='/pearlex')
 def index():
     return render_template('index.html')
 
+@app.route('/smart-tool')
+def smart_tool():
+    """Open the SMART Step 4 Tool Excel macro file"""
+    try:
+        smart_file_path = os.path.join(os.path.dirname(__file__), 'smart', 'SMART Step 4 Tool v7.xltm')
+        if os.path.exists(smart_file_path):
+            # Convert to absolute path
+            abs_path = os.path.abspath(smart_file_path)
+            
+            # Open the file with the system's default application
+            import subprocess
+            import platform
+            
+            system = platform.system()
+            if system == "Windows":
+                os.startfile(abs_path)
+            elif system == "Darwin":  # macOS
+                subprocess.run(["open", abs_path])
+            else:  # Linux
+                subprocess.run(["xdg-open", abs_path])
+            
+            return jsonify({'success': True, 'message': 'SMART Tool opened successfully'})
+        else:
+            return jsonify({'success': False, 'error': 'SMART Tool file not found'}), 404
+    except Exception as e:
+        return jsonify({'success': False, 'error': f'Error opening file: {str(e)}'}), 500
+
 if __name__ == '__main__':
     app.run(debug=True) 

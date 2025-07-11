@@ -318,4 +318,4 @@ class PearlGroundwaterExtractor:
 
     def get_batches(self):
         """Get list of current batches"""
-        return [name for name, _ in self.batches] 
+        return [name for name, _ in self.batches]
