@@ -7,7 +7,7 @@ app = Flask(__name__)
 # Import the extractors
 from pelmoex.extractor import PELMOExtractor
 from toxswaex.extractor import TOXSWAExtractor
-from pearlex.extractor import PEARLexExtractor
+from pearlex.extractor import PearlGroundwaterExtractor
 
 # Create blueprints with full functionality
 pelmoex_bp = Blueprint('pelmoex', __name__, 
@@ -16,7 +16,7 @@ pelmoex_bp = Blueprint('pelmoex', __name__,
 
 # Global extractor instances
 pelmo_extractor = PELMOExtractor()
-pearl_extractor = PEARLexExtractor()
+pearl_extractor = PearlGroundwaterExtractor()
 
 @pelmoex_bp.route('/')
 def pelmoex_index():
@@ -314,9 +314,12 @@ def pearlex_scan_directory():
         if not os.path.exists(directory):
             return jsonify({'error': f'Directory does not exist: {directory}'})
         
-        # Placeholder for PEARL directory scanning
+        # Scan for .sum files using the exact logic from original PEARLex
+        files = pearl_extractor.scan_directory(directory)
+        
         return jsonify({
-            'error': 'PEARLex functionality not yet implemented'
+            'files': files,
+            'main_dir': directory
         })
         
     except Exception as e:
@@ -327,18 +330,35 @@ def pearlex_extract_data():
     try:
         data = request.get_json()
         main_dir = data.get('main_dir', '')
-        selected_projects = data.get('selected_projects', [])
+        selected_files = data.get('selected_files', [])
+        compound_type = data.get('compound_type', 'Parent')
+        sort_by = data.get('sort_by', 'Filename')
         limit_value = data.get('limit_value', None)
         
         if not main_dir:
             return jsonify({'error': 'No main directory specified'})
         
-        if not selected_projects:
-            return jsonify({'error': 'No projects selected'})
+        if not selected_files:
+            return jsonify({'error': 'No files selected'})
         
-        # Placeholder for PEARLex data extraction
+        # Convert limit value to float if provided
+        if limit_value:
+            try:
+                limit_value = float(limit_value)
+            except ValueError:
+                return jsonify({'error': 'Invalid limit value'})
+        
+        # Extract data using the exact logic from original PEARLex
+        table_data = pearl_extractor.extract_data(selected_files)
+        
+        # Get filtered and sorted data for display
+        filtered_data = pearl_extractor.get_table_data(compound_type, sort_by, limit_value)
+        
         return jsonify({
-            'error': 'PEARLex extraction not yet implemented'
+            'data': filtered_data,
+            'header': ["Project", "Filename", "Compound Type", "Scenario", "Compound", "80th Percentile (µg/L)"],
+            'limit_value': limit_value,
+            'row_count': len(filtered_data)
         })
         
     except Exception as e:
@@ -347,9 +367,104 @@ def pearlex_extract_data():
 @pearlex_bp.route('/export_excel', methods=['POST'])
 def pearlex_export_excel():
     try:
-        return jsonify({'error': 'PEARLex export not yet implemented'})
+        data = request.get_json()
+        batch_mode = data.get('batch_mode', False)
+        limit_value = data.get('limit_value', None)
+        
+        # Convert limit value to float if provided
+        if limit_value:
+            try:
+                limit_value = float(limit_value)
+            except ValueError:
+                return jsonify({'error': 'Invalid limit value'})
+        
+        if batch_mode:
+            # Export batches
+            success, result = pearl_extractor.export_batches(limit_value)
+        else:
+            # Export single mode
+            success, result = pearl_extractor.export_to_excel_single(limit_value)
+        
+        if not success:
+            return jsonify({'error': result})
+        
+        # Send file
+        return send_file(
+            result,
+            as_attachment=True,
+            download_name='pearl_extracted_data.xlsx',
+            mimetype='application/vnd.openxmlformats-officedocument.spreadsheetml.sheet'
+        )
+        
     except Exception as e:
         return jsonify({'error': f'Error exporting Excel: {str(e)}'})
+
+@pearlex_bp.route('/add_to_batch', methods=['POST'])
+def pearlex_add_to_batch():
+    try:
+        data = request.get_json()
+        batch_name = data.get('batch_name', None)
+        
+        success, message = pearl_extractor.add_to_batch(batch_name)
+        
+        return jsonify({
+            'success': success,
+            'message': message,
+            'batches': pearl_extractor.get_batches()
+        })
+        
+    except Exception as e:
+        return jsonify({'error': f'Error adding to batch: {str(e)}'})
+
+@pearlex_bp.route('/clear_data', methods=['POST'])
+def pearlex_clear_data():
+    try:
+        success, message = pearl_extractor.clear_data()
+        
+        return jsonify({
+            'success': success,
+            'message': message
+        })
+        
+    except Exception as e:
+        return jsonify({'error': f'Error clearing data: {str(e)}'})
+
+@pearlex_bp.route('/clear_batches', methods=['POST'])
+def pearlex_clear_batches():
+    try:
+        success, message = pearl_extractor.clear_batches()
+        
+        return jsonify({
+            'success': success,
+            'message': message
+        })
+        
+    except Exception as e:
+        return jsonify({'error': f'Error clearing batches: {str(e)}'})
+
+@pearlex_bp.route('/get_table_data')
+def pearlex_get_table_data():
+    try:
+        compound_type = request.args.get('compound_type', 'Parent')
+        sort_by = request.args.get('sort_by', 'Filename')
+        limit_value = request.args.get('limit_value', None)
+        
+        # Convert limit value to float if provided
+        if limit_value:
+            try:
+                limit_value = float(limit_value)
+            except ValueError:
+                limit_value = None
+        
+        table_data = pearl_extractor.get_table_data(compound_type, sort_by, limit_value)
+        
+        return jsonify({
+            'data': table_data,
+            'header': ["Project", "Filename", "Compound Type", "Scenario", "Compound", "80th Percentile (µg/L)"]
+        })
+        
+    except Exception as e:
+        return jsonify({'error': f'Error getting table data: {str(e)}'})
 
 # Register blueprints
 app.register_blueprint(pelmoex_bp, url_prefix='/pelmoex')

@@ -3,7 +3,7 @@
 <head>
     <meta charset="UTF-8">
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
-    <title>PEARLex Extractor</title>
+    <title>PEARLex</title>
     <link href="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/css/bootstrap.min.css" rel="stylesheet">
     <link href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.0.0/css/all.min.css" rel="stylesheet">
     <style>
@@ -11,23 +11,37 @@
             background-color: #121212;
             color: #E0E0E0;
             font-family: 'Segoe UI', sans-serif;
+            font-size: 16px;
         }
         .card {
             background-color: #1E1E1E;
             border: 1px solid #2E2E2E;
         }
-        .btn-primary {
+        .btn {
             background-color: #2D2D30;
-            border-color: #3E3A3F;
+            border: 1px solid #3E3A3F;
+            padding: 6px;
+            border-radius: 3px;
         }
-        .btn-primary:hover {
+        .btn:hover {
             background-color: #3A3A3F;
-            border-color: #3E3A3F;
+        }
+        .btn-success {
+            background-color: #bfb800;
+            border-color: #bfb800;
+            color: white;
+        }
+        .btn-success:hover {
+            background-color: #a8a600;
+            border-color: #a8a600;
+            color: white;
         }
         .form-control, .form-select {
             background-color: #1E1E1E;
             border: 1px solid #3E3A3F;
             color: #E0E0E0;
+            padding: 4px;
+            border-radius: 3px;
         }
         .form-control:focus, .form-select:focus {
             background-color: #1E1E1E;
@@ -38,13 +52,19 @@
         .table {
             background-color: #1E1E1E;
             color: #E0E0E0;
+            gridline-color: #2E2E2E;
         }
         .table th {
-            background-color: #2E2E2E;
-            border-color: #3E3A3F;
+            background-color: #1E1E1E;
+            border-color: #2E2E2E;
+            padding: 6px;
         }
         .table td {
-            border-color: #3E3A3F;
+            border-color: #2E2E2E;
+        }
+        .table tbody tr:hover {
+            background-color: #2E2E2E;
+            color: #E0E0E0;
         }
         .list-group {
             background-color: #1E1E1E;
@@ -93,18 +113,56 @@
             color: #E0E0E0;
             min-width: 300px;
         }
+        .text-warning {
+            color: #bfb800 !important;
+        }
+        .exceeds-limit {
+            color: #ff0000 !important;
+        }
+        .filter-controls {
+            display: flex;
+            gap: 10px;
+            align-items: center;
+            flex-wrap: wrap;
+        }
+        .filter-controls .form-select {
+            min-width: 110px;
+        }
+        .batch-widget {
+            display: none;
+        }
+        .single-widget {
+            display: block;
+        }
+        .batch-mode .single-widget {
+            display: none;
+        }
+        .batch-mode .batch-widget {
+            display: block;
+        }
+        .info-button {
+            background-color: #2D2D30;
+            border: 1px solid #3E3A3F;
+            padding: 6px;
+            border-radius: 3px;
+            width: 36px;
+            height: 36px;
+        }
+        .info-button:hover {
+            background-color: #3A3A3F;
+        }
     </style>
 </head>
 <body>
     <div class="container-fluid mt-3">
         <div class="row">
-            <!-- Left Side: File/Project Selection -->
+            <!-- Left Side: File Selection and Logo -->
             <div class="col-md-3">
                 <div class="card">
                     <div class="card-body">
                         <div class="logo-container">
                             <img src="{{ url_for('pearlex.static', filename='ls.png') }}" alt="PEARLex Logo" class="logo">
-                            <h4 class="mt-2 text-warning">PEARLex Extractor v1</h4>
+                            <h4 class="mt-2 text-warning">PEARLex v1</h4>
                         </div>
                         
                         <div class="mb-3">
@@ -114,70 +172,140 @@
                         </div>
 
                         <div class="mb-3">
-                            <label for="directoryInput" class="form-label">PEARL Directory Path:</label>
-                            <div class="input-group">
-                                <input type="text" class="form-control" id="directoryInput" value="C:\PEARL_Projects" placeholder="Enter directory path...">
-                                <button class="btn btn-secondary" type="button" onclick="scanDirectory()">
-                                    <i class="fas fa-search"></i> Scan
-                                </button>
-                            </div>
+                            <button class="btn btn-primary w-100" onclick="selectDirectory()">
+                                Select PearlDB Directory
+                            </button>
                         </div>
 
                         <div class="mb-3">
-                            <label class="form-label">Select Project(s):</label>
-                            <div id="projectList" class="list-group" style="max-height: 300px; overflow-y: auto;">
-                                <div class="text-muted text-center py-3">No projects available</div>
+                            <label class="form-label">.sum Files:</label>
+                            <div id="fileList" class="list-group" style="max-height: 300px; overflow-y: auto;">
+                                <div class="text-muted text-center py-3">No files available</div>
                             </div>
-                        </div>
-
-                        <div class="mb-3">
-                            <label for="limitSelect" class="form-label">Parametric Limit:</label>
-                            <select class="form-select" id="limitSelect">
-                                <option value="">No limit</option>
-                                <option value="0.1">0.1 µg/l</option>
-                                <option value="0.001">0.001 µg/l</option>
-                            </select>
-                        </div>
-
-                        <div class="d-grid gap-2">
-                            <button class="btn btn-success" onclick="extractData()" id="extractBtn">
-                                <span class="loading">
-                                    <span class="spinner-border spinner-border-sm me-2"></span>
-                                </span>
-                                <i class="fas fa-download me-2"></i>Extract Data
-                            </button>
-                            <button class="btn btn-info" onclick="exportExcel()" id="exportBtn" disabled>
-                                <i class="fas fa-file-excel me-2"></i>Export to Excel
-                            </button>
                         </div>
                     </div>
                 </div>
             </div>
 
-            <!-- Right Side: Data Display -->
+            <!-- Right Side: Filters, buttons, table -->
             <div class="col-md-9">
                 <div class="card">
-                    <div class="card-header d-flex justify-content-between align-items-center">
-                        <h5 class="mb-0">Extracted Data</h5>
-                        <div>
-                            <button class="btn btn-sm btn-outline-secondary" onclick="toggleTheme()" id="themeBtn">
+                    <div class="card-header">
+                        <div class="filter-controls">
+                            <div>
+                                <label class="form-label me-2">Compound Type:</label>
+                                <select class="form-select" id="compoundTypeDropdown">
+                                    <option value="Parent">Parent</option>
+                                    <option value="Metabolite">Metabolite</option>
+                                </select>
+                            </div>
+                            
+                            <div>
+                                <label class="form-label me-2">Sort by:</label>
+                                <select class="form-select" id="sortDropdown">
+                                    <option value="Filename">Filename</option>
+                                    <option value="Compound">Compound</option>
+                                    <option value="Scenario">Scenario</option>
+                                </select>
+                            </div>
+                            
+                            <div>
+                                <label class="form-label me-2">Parametric Limit:</label>
+                                <select class="form-select" id="limitDropdown">
+                                    <option value="">No limit</option>
+                                    <option value="0.1">0.1 µg/L</option>
+                                    <option value="0.001">0.001 µg/L</option>
+                                </select>
+                            </div>
+                            
+                            <button class="btn btn-outline-secondary" onclick="toggleTheme()" id="themeToggleButton">
                                 <i class="fas fa-sun"></i> Light Mode
                             </button>
-                            <button class="btn btn-sm btn-outline-secondary" onclick="copyTable()" id="copyBtn" disabled>
-                                <i class="fas fa-copy"></i> Copy
+                            
+                            <button class="btn info-button" onclick="showInfoDialog()" id="infoButton" title="Click for usage instructions">
+                                <i class="fas fa-info-circle"></i>
                             </button>
-                            <button class="btn btn-sm btn-outline-warning" onclick="resetTable()" id="resetBtn" disabled>
-                                <i class="fas fa-undo"></i> Reset
-                            </button>
+                            
+                            <div class="form-check">
+                                <input class="form-check-input" type="checkbox" id="chkBatchMode" onchange="toggleBatchMode()">
+                                <label class="form-check-label" for="chkBatchMode">
+                                    Batch Mode
+                                </label>
+                            </div>
                         </div>
                     </div>
+                    
                     <div class="card-body">
-                        <div id="dataTable">
-                            <div class="text-muted text-center py-5">
-                                <i class="fas fa-table fa-3x mb-3"></i>
-                                <p>PEARLex extraction tool is not yet implemented.</p>
-                                <p>This is a placeholder for the PEARLex extraction functionality.</p>
+                        <!-- Single Mode Widget -->
+                        <div class="single-widget mb-3">
+                            <div class="d-flex gap-2 align-items-center">
+                                <button class="btn btn-success" onclick="extractData()" id="btnExtractSingle">
+                                    Extract Data
+                                </button>
+                                <button class="btn btn-success" onclick="exportToExcelSingle()" id="btnExportSingle">
+                                    Export to Excel
+                                </button>
+                                <button class="btn btn-outline-secondary" onclick="copyTableToClipboard()" id="btnCopySingle" title="Copy table to clipboard">
+                                    <i class="fas fa-copy"></i>
+                                </button>
+                                <button class="btn btn-outline-secondary" onclick="clearData()" id="btnResetSingle" title="Clear Table">
+                                    <i class="fas fa-undo"></i>
+                                </button>
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" id="chkOpenExcelSingle">
+                                    <label class="form-check-label" for="chkOpenExcelSingle">
+                                        Open Excel after export
+                                    </label>
+                                </div>
                             </div>
+                        </div>
+                        
+                        <!-- Batch Mode Widget -->
+                        <div class="batch-widget mb-3">
+                            <div class="d-flex gap-2 align-items-center">
+                                <button class="btn btn-success" onclick="extractData()" id="btnExtractBatch">
+                                    Extract Data
+                                </button>
+                                <button class="btn btn-outline-secondary" onclick="clearData()" id="btnClearTable">
+                                    Clear Table
+                                </button>
+                                <button class="btn btn-outline-secondary" onclick="addToBatch()" id="btnAddBatch">
+                                    Add to Batch
+                                </button>
+                                <button class="btn btn-success" onclick="exportBatches()" id="btnExportBatches">
+                                    Export Batches
+                                </button>
+                                <div class="form-check">
+                                    <input class="form-check-input" type="checkbox" id="chkOpenExcelBatch">
+                                    <label class="form-check-label" for="chkOpenExcelBatch">
+                                        Open Excel after export
+                                    </label>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Table -->
+                        <div id="tableContainer">
+                            <table class="table table-striped" id="tableWidget">
+                                <thead>
+                                    <tr>
+                                        <th>Project</th>
+                                        <th>Filename</th>
+                                        <th>Compound Type</th>
+                                        <th>Scenario</th>
+                                        <th>Compound</th>
+                                        <th>80th Percentile (µg/L)</th>
+                                    </tr>
+                                </thead>
+                                <tbody id="tableBody">
+                                    <tr>
+                                        <td colspan="6" class="text-center text-muted py-5">
+                                            <i class="fas fa-table fa-3x mb-3"></i>
+                                            <p>No data available</p>
+                                        </td>
+                                    </tr>
+                                </tbody>
+                            </table>
                         </div>
                     </div>
                 </div>
@@ -190,6 +318,11 @@
 
     <script src="https://cdn.jsdelivr.net/npm/bootstrap@5.1.3/dist/js/bootstrap.bundle.min.js"></script>
     <script>
+        let mainDir = "";
+        let allData = [];
+        let batches = [];
+        let isDarkMode = true;
+
         function showToast(message, type = 'info') {
             const toastContainer = document.getElementById('toastContainer');
             const toastId = 'toast-' + Date.now();
@@ -216,29 +349,358 @@
             });
         }
 
-        function scanDirectory() {
-            showToast('PEARLex functionality not yet implemented', 'warning');
+        function selectDirectory() {
+            // In a web app, we'll use a text input instead of file dialog
+            const directory = prompt("Enter PearlDB directory path:");
+            if (directory) {
+                scanDirectory(directory);
+            }
+        }
+
+        function scanDirectory(directory) {
+            fetch('/pearlex/scan_directory', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ directory: directory })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.error) {
+                    showToast(data.error, 'error');
+                } else {
+                    mainDir = data.main_dir;
+                    updateFileList(data.files);
+                    showToast(`Found ${data.files.length} .sum files`, 'success');
+                }
+            })
+            .catch(error => {
+                showToast('Error scanning directory: ' + error, 'error');
+            });
+        }
+
+        function updateFileList(files) {
+            const fileList = document.getElementById('fileList');
+            fileList.innerHTML = '';
+            
+            if (files.length === 0) {
+                fileList.innerHTML = '<div class="text-muted text-center py-3">No files available</div>';
+                return;
+            }
+            
+            files.forEach(file => {
+                const item = document.createElement('div');
+                item.className = 'list-group-item';
+                item.style.cursor = 'pointer';
+                item.textContent = file;
+                item.onclick = () => toggleFileSelection(item);
+                fileList.appendChild(item);
+            });
+        }
+
+        function toggleFileSelection(item) {
+            item.classList.toggle('active');
+        }
+
+        function getSelectedFiles() {
+            const items = document.querySelectorAll('#fileList .list-group-item.active');
+            return Array.from(items).map(item => item.textContent);
         }
 
         function extractData() {
-            showToast('PEARLex extraction not yet implemented', 'warning');
+            const selectedFiles = getSelectedFiles();
+            if (selectedFiles.length === 0) {
+                showToast('Please select one or more .sum files.', 'warning');
+                return;
+            }
+
+            const compoundType = document.getElementById('compoundTypeDropdown').value;
+            const sortBy = document.getElementById('sortDropdown').value;
+            const limitValue = document.getElementById('limitDropdown').value;
+
+            fetch('/pearlex/extract_data', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    main_dir: mainDir,
+                    selected_files: selectedFiles,
+                    compound_type: compoundType,
+                    sort_by: sortBy,
+                    limit_value: limitValue
+                })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.error) {
+                    showToast(data.error, 'error');
+                } else {
+                    allData = data.data;
+                    updateTable(data.data);
+                    showToast(`Extracted ${data.row_count} rows`, 'success');
+                }
+            })
+            .catch(error => {
+                showToast('Error extracting data: ' + error, 'error');
+            });
         }
 
-        function exportExcel() {
-            showToast('PEARLex export not yet implemented', 'warning');
+        function updateTable(tableData) {
+            const tbody = document.getElementById('tableBody');
+            tbody.innerHTML = '';
+            
+            if (tableData.length === 0) {
+                tbody.innerHTML = `
+                    <tr>
+                        <td colspan="6" class="text-center text-muted py-5">
+                            <i class="fas fa-table fa-3x mb-3"></i>
+                            <p>No data available</p>
+                        </td>
+                    </tr>
+                `;
+                return;
+            }
+            
+            tableData.forEach(row => {
+                const tr = document.createElement('tr');
+                row.data.forEach((cell, index) => {
+                    const td = document.createElement('td');
+                    td.textContent = cell;
+                    if (row.exceeds_limit && index === 5) {
+                        td.className = 'exceeds-limit';
+                    }
+                    tr.appendChild(td);
+                });
+                tbody.appendChild(tr);
+            });
         }
 
-        function copyTable() {
-            showToast('PEARLex copy not yet implemented', 'warning');
+        function clearData() {
+            allData = [];
+            updateTable([]);
+            showToast('Data cleared', 'success');
         }
 
-        function resetTable() {
-            showToast('PEARLex reset not yet implemented', 'warning');
+        function addToBatch() {
+            if (allData.length === 0) {
+                showToast('Extract data first.', 'warning');
+                return;
+            }
+            
+            const batchName = prompt('Enter batch name:') || `Batch_${batches.length + 1}`;
+            
+            fetch('/pearlex/add_to_batch', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({ batch_name: batchName })
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    batches = data.batches;
+                    showToast(data.message, 'success');
+                } else {
+                    showToast(data.message, 'error');
+                }
+            })
+            .catch(error => {
+                showToast('Error adding to batch: ' + error, 'error');
+            });
+        }
+
+        function exportToExcelSingle() {
+            if (allData.length === 0) {
+                showToast('No extracted data.', 'warning');
+                return;
+            }
+            
+            const limitValue = document.getElementById('limitDropdown').value;
+            
+            fetch('/pearlex/export_excel', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    batch_mode: false,
+                    limit_value: limitValue
+                })
+            })
+            .then(response => {
+                if (response.ok) {
+                    return response.blob();
+                } else {
+                    return response.json().then(data => {
+                        throw new Error(data.error || 'Export failed');
+                    });
+                }
+            })
+            .then(blob => {
+                const url = window.URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = 'pearl_extracted_data.xlsx';
+                document.body.appendChild(a);
+                a.click();
+                window.URL.revokeObjectURL(url);
+                document.body.removeChild(a);
+                showToast('Exported successfully.', 'success');
+            })
+            .catch(error => {
+                showToast('Export error: ' + error.message, 'error');
+            });
+        }
+
+        function exportBatches() {
+            if (batches.length === 0) {
+                showToast('No batches to export.', 'warning');
+                return;
+            }
+            
+            const limitValue = document.getElementById('limitDropdown').value;
+            
+            fetch('/pearlex/export_excel', {
+                method: 'POST',
+                headers: {
+                    'Content-Type': 'application/json',
+                },
+                body: JSON.stringify({
+                    batch_mode: true,
+                    limit_value: limitValue
+                })
+            })
+            .then(response => {
+                if (response.ok) {
+                    return response.blob();
+                } else {
+                    return response.json().then(data => {
+                        throw new Error(data.error || 'Export failed');
+                    });
+                }
+            })
+            .then(blob => {
+                const url = window.URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = 'pearl_batches.xlsx';
+                document.body.appendChild(a);
+                a.click();
+                window.URL.revokeObjectURL(url);
+                document.body.removeChild(a);
+                showToast('Batches exported successfully.', 'success');
+            })
+            .catch(error => {
+                showToast('Export error: ' + error.message, 'error');
+            });
+        }
+
+        function copyTableToClipboard() {
+            const table = document.getElementById('tableWidget');
+            const rows = table.querySelectorAll('tbody tr');
+            
+            if (rows.length === 0 || rows[0].cells[0].colSpan) {
+                showToast('No data available to copy.', 'warning');
+                return;
+            }
+            
+            let copiedText = '';
+            
+            // Add headers
+            const headers = Array.from(table.querySelectorAll('thead th')).map(th => th.textContent);
+            copiedText += headers.join('\t') + '\n';
+            
+            // Add data rows
+            rows.forEach(row => {
+                const rowData = Array.from(row.cells).map(cell => cell.textContent);
+                copiedText += rowData.join('\t') + '\n';
+            });
+            
+            navigator.clipboard.writeText(copiedText).then(() => {
+                showToast('Table copied to clipboard successfully.', 'success');
+            }).catch(() => {
+                showToast('Failed to copy to clipboard.', 'error');
+            });
+        }
+
+        function toggleBatchMode() {
+            const isChecked = document.getElementById('chkBatchMode').checked;
+            document.body.classList.toggle('batch-mode', isChecked);
+        }
+
+        function showInfoDialog() {
+            const infoText = `
+                <strong>Usage Instructions:</strong><br><br>
+                1. Select a directory containing .sum files.<br><br>
+                2. If not in Batch Mode: Extract Data, then Export to Excel for Parent+Metabolite tables in one sheet.<br><br>
+                3. If Batch Mode is checked: Extract Data → Add to Batch → Clear Table → repeat if needed. Then Export Batches (Parent+Met in separate sheets).<br>
+            `;
+            
+            // Create a simple modal dialog
+            const modal = document.createElement('div');
+            modal.className = 'modal fade';
+            modal.innerHTML = `
+                <div class="modal-dialog">
+                    <div class="modal-content" style="background-color: #1E1E1E; color: #E0E0E0;">
+                        <div class="modal-header">
+                            <h5 class="modal-title">Usage Instructions</h5>
+                            <button type="button" class="btn-close btn-close-white" data-bs-dismiss="modal"></button>
+                        </div>
+                        <div class="modal-body">
+                            ${infoText}
+                        </div>
+                        <div class="modal-footer">
+                            <button type="button" class="btn btn-secondary" data-bs-dismiss="modal">Close</button>
+                        </div>
+                    </div>
+                </div>
+            `;
+            
+            document.body.appendChild(modal);
+            const modalInstance = new bootstrap.Modal(modal);
+            modalInstance.show();
+            
+            modal.addEventListener('hidden.bs.modal', () => {
+                document.body.removeChild(modal);
+            });
         }
 
         function toggleTheme() {
-            showToast('Theme toggle not yet implemented', 'warning');
+            isDarkMode = !isDarkMode;
+            const themeBtn = document.getElementById('themeToggleButton');
+            
+            if (isDarkMode) {
+                document.body.style.backgroundColor = '#121212';
+                document.body.style.color = '#E0E0E0';
+                themeBtn.innerHTML = '<i class="fas fa-sun"></i> Light Mode';
+            } else {
+                document.body.style.backgroundColor = '#F0F0F0';
+                document.body.style.color = '#202020';
+                themeBtn.innerHTML = '<i class="fas fa-moon"></i> Dark Mode';
+            }
         }
+
+        // Add event listeners for filter changes
+        document.getElementById('compoundTypeDropdown').addEventListener('change', () => {
+            if (allData.length > 0) {
+                extractData();
+            }
+        });
+
+        document.getElementById('sortDropdown').addEventListener('change', () => {
+            if (allData.length > 0) {
+                extractData();
+            }
+        });
+
+        document.getElementById('limitDropdown').addEventListener('change', () => {
+            if (allData.length > 0) {
+                extractData();
+            }
+        });
     </script>
 </body>
 </html> 
