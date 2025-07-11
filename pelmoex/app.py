@@ -8,7 +8,7 @@ from werkzeug.utils import secure_filename
 import xlsxwriter
 from xlsxwriter.utility import xl_range
 
-app = Flask(__name__)
+app = Flask(__name__, template_folder='templates')
 app.secret_key = 'pelmo_extractor_secret_key'
 
 # Global variables to store session data
@@ -247,7 +247,7 @@ extractor = PELMOExtractor()
 
 @app.route('/')
 def index():
-    return render_template('index.html')
+    return render_template('pelmoex/index.html')
 
 @app.route('/scan_directory', methods=['POST'])
 def scan_directory():
